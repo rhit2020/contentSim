@@ -132,7 +132,7 @@ public class DB {
 	public Map<String,Double> getTFIDF(String content) {
 		Map<String,Double> weightMap = new HashMap<String,Double>();
 		try {
-			String sqlCommand = "SELECT distinct concept,`log(tf+1)idf` FROM temp2_ent_jcontent_tfidf where title = '" + content + "';";
+			String sqlCommand = "SELECT distinct concept,`tfidf` FROM temp2_ent_jcontent_tfidf where title = '" + content + "';";
 			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
 			ResultSet rs = ps.executeQuery();
 			while (rs.next())

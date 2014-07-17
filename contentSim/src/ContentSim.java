@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +18,8 @@ public class ContentSim {
 //			String[] eList = db.getExamples();
 //			String[] qList = db.getQuestions();			
 			// **** for test ****//
-			String[] qList = {"jarraylist1"};			
-			String[] eList = {"Point_v2"};
+			String[] qList = {"jVariables3"};			
+			String[] eList = {"JavaTutorial_4_1_5"};
 //			String[] eList = {"arraylist2_v2"};
 
 //			String[] eList = {"poly_v2","inheritance_casting_1","inheritance_polymorphism_1","inheritance_polymorphism_2","inheritance_constructors_1","simple_inheritance_1"};
@@ -42,20 +43,23 @@ public class ContentSim {
 				/*
 				 * sij = (2a-b)/(2a+b); a: common concepts in two trees/subtrees; b = concepts that are not common in two trees/subtrees
 				 */
-				//weight of concepts in question
+				//TFIDF values used as weight of concepts in question/example
 				Map<String,Double> qConceptWeight = db.getTFIDF(q);
+				Map<String,Double> eConceptWeight = db.getTFIDF(e);
+
 				//calculate global similarity 
-				double sim = simConceptCount(qConcepts,eConcepts); //variant 1: global tree - count concept
-				db.insertContentSim(q, e, sim, "GLOBAL-C");
-				sim = simConceptWeight(db,q,qConcepts,eConcepts,qConceptWeight); //variant 2: global tree - weight concept
-				db.insertContentSim(q, e, sim, "GLOBAL-W");
+				double sim = 0.0;
+				sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
+				db.insertContentSim(q, e, sim, "GLOBAL:AS");
+				sim = simCosine(db,q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
+				db.insertContentSim(q, e, sim, "GLOBAL:COS");
 				//calculate local similarity
 				List<ArrayList<String>> qtree = getSubtrees(db,q);
 				List<ArrayList<String>> etree = getSubtrees(db,e);
-				sim = localSim(null,null,qtree,etree,"C",null); //variant 1: local subtree - count concept
-				db.insertContentSim(q, e, sim, "LOCAL-C");
-				sim = localSim(db,q,qtree,etree,"W",qConceptWeight); //variant 2: local subtree - weight concept
-				db.insertContentSim(q, e, sim, "LOCAL-W"); 
+				sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
+				db.insertContentSim(q, e, sim, "LOCAL:AS");
+				sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
+				db.insertContentSim(q, e, sim, "LOCAL:COS"); 
 			}
 		}		
 	}
@@ -83,7 +87,13 @@ public class ContentSim {
 		return subtreeList;
 	}
 
-	private static double localSim(DB db, String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, String variant, Map<String,Double> qConceptWeight) {
+	/*
+	 * Return value ranges from -1 to 1. But never reaches one: [-1,1). The min happens when all cells are -1. Max happens when the value in each
+	 * cell gets very close to 1 but not 1 (so, all cells will have a value very close to 1)
+	 */
+	private static double localSim(DB db, String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
+			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight)
+	{
 		//sim by count of the concept
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
@@ -96,11 +106,11 @@ public class ContentSim {
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
 			{
-				if (variant.equals("C"))
-					s[i][j] = simConceptCount(qtree.get(i),etree.get(j));
-				else if (variant.equals("W"))
+				if (variant.equals("AS"))
+					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j));
+				else if (variant.equals("COS"))
 				{
-					s[i][j] = simConceptWeight(db,question,qtree.get(i),etree.get(j),qConceptWeight);
+					s[i][j] = simCosine(db,question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
 				}
 			}
 		//fill alpha
@@ -126,32 +136,52 @@ public class ContentSim {
 			{
 				sim += (alpha[i][j]*s[i][j]);
 			}
-		sim /= (qtree.size()*etree.size());
+		
+		/*
+		 * divide the sim by sum of weights to calculate weighted average
+		 * sumOfWeights = qtree.size()*etree.size() when no alpha is 0
+		 */
+		double sumOfWeights = 0.0;
+		for (int i = 0; i < qtree.size(); i++)
+			for(int j = 0; j < etree.size(); j++)			
+				sumOfWeights += alpha[i][j];
+			
+		sim = sim / sumOfWeights;
 		return sim;
 	}
 
-	private static double simConceptWeight(DB db, String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight) {
-		//sim by weight of common and not common concepts
+	/* 
+	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
+	 */
+	private static double simCosine(DB db, String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight) {
+		//create concept space by union of two sets. Set drops repeated elements and contains unique values
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
-		List<String> alist = new ArrayList<String>(intersection(qConceptSet, eConceptSet));
-		List<String> blist = new ArrayList<String>(symDifference(qConceptSet, eConceptSet));
-		double aw = 0.0;
-		double bw = 0.0;
-		for (String a : alist)
+		List<String> conceptSpace = new ArrayList<String>(union(qConceptSet, eConceptSet));
+		HashMap<String,Double> evector = new HashMap<String,Double>();// concept vector for example
+		HashMap<String,Double> qvector = new HashMap<String,Double>(); // concept vector for question
+		for (String c : conceptSpace)
 		{
-			aw += qConceptWeight.get(a);
+			evector.put(c, eConceptWeight.get(c)==null?0:eConceptWeight.get(c));
+			qvector.put(c, qConceptWeight.get(c)==null?0:qConceptWeight.get(c));			
 		}
-		for (String b : blist)
+		double numerator = 0.0;
+		double eDemoninator = 0.0;
+		double qDenominator = 0.0;
+		for (String c :  conceptSpace)
 		{
-			bw += (qConceptWeight.get(b) == null?0:qConceptWeight.get(b));
+			numerator += qvector.get(c) * evector.get(c);
+			eDemoninator += Math.pow(evector.get(c), 2); //each element in the example vector is raised to the power of 2 
+			qDenominator += Math.pow(qvector.get(c), 2); //each element in the example vector is raised to the power of 2 
 		}
-		double sim = (2*aw-bw)/(2*aw+bw);
+		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
 		return sim;	
 	}
-
-	public static double simConceptCount(List<String> qConcepts, List<String> eConcepts){
-		//sim by count of the concept
+	
+	/*
+	 * Return value ranges from -1 to 1.
+	 */
+	public static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts){
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
 		double a = intersection(qConceptSet, eConceptSet).size();
