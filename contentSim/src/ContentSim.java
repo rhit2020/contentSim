@@ -18,8 +18,9 @@ public class ContentSim {
 //			String[] eList = db.getExamples();
 //			String[] qList = db.getQuestions();			
 			// **** for test ****//
-			String[] qList = {"jVariables3"};			
-			String[] eList = {"JavaTutorial_4_1_5"};
+			String[] qList = {"jString5"};			
+//			String[] eList = {"StringExample_v2"};
+			String[] eList = {"exception_v2","StringExample_v2","CreateString_v2"};
 //			String[] eList = {"arraylist2_v2"};
 
 //			String[] eList = {"poly_v2","inheritance_casting_1","inheritance_polymorphism_1","inheritance_polymorphism_2","inheritance_constructors_1","simple_inheritance_1"};
@@ -49,17 +50,17 @@ public class ContentSim {
 
 				//calculate global similarity 
 				double sim = 0.0;
-				sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
-				db.insertContentSim(q, e, sim, "GLOBAL:AS");
-				sim = simCosine(db,q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
-				db.insertContentSim(q, e, sim, "GLOBAL:COS");
+				//sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
+				//db.insertContentSim(q, e, sim, "GLOBAL:AS");
+				//sim = simCosine(db,q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
+				//db.insertContentSim(q, e, sim, "GLOBAL:COS");
 				//calculate local similarity
 				List<ArrayList<String>> qtree = getSubtrees(db,q);
 				List<ArrayList<String>> etree = getSubtrees(db,e);
 				sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
 				db.insertContentSim(q, e, sim, "LOCAL:AS");
-				sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
-				db.insertContentSim(q, e, sim, "LOCAL:COS"); 
+				//sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
+				//db.insertContentSim(q, e, sim, "LOCAL:COS"); 
 			}
 		}		
 	}
@@ -88,8 +89,7 @@ public class ContentSim {
 	}
 
 	/*
-	 * Return value ranges from -1 to 1. But never reaches one: [-1,1). The min happens when all cells are -1. Max happens when the value in each
-	 * cell gets very close to 1 but not 1 (so, all cells will have a value very close to 1)
+	 * Return value ranges from -1 to 1. 
 	 */
 	private static double localSim(DB db, String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
 			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight)
@@ -97,39 +97,67 @@ public class ContentSim {
 		//sim by count of the concept
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
-		//initialize all elements of alpha to be 1
+		//initialize all elements of alpha to be -1
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
-				alpha[i][j] = 1;
+				alpha[i][j] = -1;
 				
 		//fill s
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
 			{
 				if (variant.equals("AS"))
+				{
 					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j));
+				}
 				else if (variant.equals("COS"))
 				{
 					s[i][j] = simCosine(db,question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
 				}
 			}
+		//print s[i][j]
+		for (int i = 0; i < qtree.size(); i++)
+		{
+			for(int j = 0; j < etree.size(); j++)
+				System.out.print(String.format("%s ", s[i][j]));
+			System.out.println();
+		}	
+			
 		//fill alpha
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
 			{
-				//check 1's in row
-				for (int e = 0; e < etree.size(); e++)
+				if (alpha[i][j] != 0)
 				{
-					if (s[i][e] == 1 & e!=j)
-						alpha[i][j] = 0;
-				}
-				//check 1's in column
-				for (int q = 0; q < qtree.size(); q++)
-				{
-					if (s[q][j] == 1 & q!=i)
-						alpha[i][j] = 0;
-				}
+					//set alpha 1 for this element
+					alpha[i][j] = 1;
+					//if s[i][j] is one, set alpha of other elements in the same row and column to 0. 
+					if (s[i][j] == 1)
+					{
+						//set alpha 0 for other elements in the same row
+						for (int e = 0; e < etree.size(); e++)
+						{
+							if (e!=j)
+								alpha[i][e] = 0;
+						}
+						//set alpha 0 for other elements in the same column
+						for (int q = 0; q < qtree.size(); q++)
+						{
+							if (q!=i)
+								alpha[q][j] = 0;
+						}
+					}								
+				}				
 			}
+		System.out.println("***********");
+
+		//print alpha[i][j]
+				for (int i = 0; i < qtree.size(); i++)
+				{
+					for(int j = 0; j < etree.size(); j++)
+						System.out.print(alpha[i][j]+" ");
+					System.out.println();
+				}
 		double sim = 0.0;
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
@@ -162,8 +190,8 @@ public class ContentSim {
 		HashMap<String,Double> qvector = new HashMap<String,Double>(); // concept vector for question
 		for (String c : conceptSpace)
 		{
-			evector.put(c, eConceptWeight.get(c)==null?0:eConceptWeight.get(c));
-			qvector.put(c, qConceptWeight.get(c)==null?0:qConceptWeight.get(c));			
+			evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
+			qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);			
 		}
 		double numerator = 0.0;
 		double eDemoninator = 0.0;
