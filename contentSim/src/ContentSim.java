@@ -13,18 +13,14 @@ public class ContentSim {
 	public static void main(String[] args){
 		DB db  = new DB();
 		db.connect();
+		// **** for test ****//
+		String[] qList = {"jwhile2"};	
+		String[] eList = {"while_v2","JavaTutorial_4_2_5"};
+		// **** for test ****//
 		if (db.isConnectedToLabstudy())
-        {
+        {			
 //			String[] eList = db.getExamples();
-//			String[] qList = db.getQuestions();			
-			// **** for test ****//
-			String[] qList = {"jString5"};			
-//			String[] eList = {"StringExample_v2"};
-			String[] eList = {"exception_v2","StringExample_v2","CreateString_v2"};
-//			String[] eList = {"arraylist2_v2"};
-
-//			String[] eList = {"poly_v2","inheritance_casting_1","inheritance_polymorphism_1","inheritance_polymorphism_2","inheritance_constructors_1","simple_inheritance_1"};
-			// **** for test ****//
+//			String[] qList = db.getQuestions();				
 			calculateSim(db, qList, eList);
 			db.disconnect();
 		}
@@ -47,7 +43,6 @@ public class ContentSim {
 				//TFIDF values used as weight of concepts in question/example
 				Map<String,Double> qConceptWeight = db.getTFIDF(q);
 				Map<String,Double> eConceptWeight = db.getTFIDF(e);
-
 				//calculate global similarity 
 				double sim = 0.0;
 				//sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
@@ -60,7 +55,7 @@ public class ContentSim {
 				sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
 				db.insertContentSim(q, e, sim, "LOCAL:AS");
 				//sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
-				//db.insertContentSim(q, e, sim, "LOCAL:COS"); 
+				//db.insertContentSim(q, e, sim, "LOCAL:COS");
 			}
 		}		
 	}
@@ -69,23 +64,33 @@ public class ContentSim {
 		List<Integer> lines = db.getStartEndLine(content);
 		int start = lines.get(0);
 		int end = lines.get(1);
+		ArrayList<String> subtree;
 		for (int line = start; line <= end; line++)
 		{
-			List<Integer> endLines = db.getConceptEndLines(content,line);			
+			//create subtree for concepts that are in the current line
+			subtree = db.getConceptsInSameLine(content, line);
+			if (updateSubtreeList(subtree,subtreeList) == true)
+				subtreeList.add(subtree);	
+			List<Integer> endLines = db.getEndLineBlock(content,line);			
 			for (int e : endLines)
 			{
-				ArrayList<String> subtree = new ArrayList<String>();
+				//create subtree for the block
+				subtree = new ArrayList<String>();
 				List<String> adjucentConceptsList = db.getAdjacentConcept(content,line,e);
 				Collections.sort(adjucentConceptsList, new SortByName());
 				for (String adjcon : adjucentConceptsList)
 					subtree.add(adjcon);				
-				if (subtree.isEmpty() == false && subtreeList.contains(subtree) == false)
-				{
+				if (updateSubtreeList(subtree,subtreeList) == true)
 					subtreeList.add(subtree);	
-				}
 			}			
 		}	
 		return subtreeList;
+	}
+
+	private static boolean updateSubtreeList(ArrayList<String> subtree, List<ArrayList<String>> subtreeList) {
+		if (subtree.isEmpty() == false && subtreeList.contains(subtree) == false)
+			return true;
+		return false;		
 	}
 
 	/*
@@ -94,13 +99,12 @@ public class ContentSim {
 	private static double localSim(DB db, String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
 			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight)
 	{
-		//sim by count of the concept
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
-		//initialize all elements of alpha to be -1
+		//initialize all elements of alpha to be 1
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
-				alpha[i][j] = -1;
+				alpha[i][j] = 1;
 				
 		//fill s
 		for (int i = 0; i < qtree.size(); i++)
@@ -115,14 +119,7 @@ public class ContentSim {
 					s[i][j] = simCosine(db,question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
 				}
 			}
-		//print s[i][j]
-		for (int i = 0; i < qtree.size(); i++)
-		{
-			for(int j = 0; j < etree.size(); j++)
-				System.out.print(String.format("%s ", s[i][j]));
-			System.out.println();
-		}	
-			
+		print(s);//print s[i][j]
 		//fill alpha
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
@@ -149,15 +146,7 @@ public class ContentSim {
 					}								
 				}				
 			}
-		System.out.println("***********");
-
-		//print alpha[i][j]
-				for (int i = 0; i < qtree.size(); i++)
-				{
-					for(int j = 0; j < etree.size(); j++)
-						System.out.print(alpha[i][j]+" ");
-					System.out.println();
-				}
+		print(alpha);//print alpha[i][j]
 		double sim = 0.0;
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
@@ -176,6 +165,24 @@ public class ContentSim {
 			
 		sim = sim / sumOfWeights;
 		return sim;
+	}
+
+	private static void print(int[][] alpha) {
+		for (int i = 0; i < alpha.length; i++)
+		{
+			for(int j = 0; j < alpha[0].length; j++)
+				System.out.print(String.format("%s ", alpha[i][j]));
+			System.out.println();
+		}			
+	}
+
+	private static void print(double[][] s) {
+		for (int i = 0; i < s.length; i++)
+		{
+			for(int j = 0; j < s[0].length; j++)
+				System.out.print(String.format("%.2f ", s[i][j]));
+			System.out.println();
+		}		
 	}
 
 	/* 

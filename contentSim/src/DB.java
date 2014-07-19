@@ -162,6 +162,24 @@ public class DB {
 		}				
 		return conceptList;	
 	}
+	
+	public ArrayList<String> getConceptsInSameLine(String content, int sLine) {
+		ArrayList<String> conceptList = new ArrayList<String>();
+		try
+		{		
+			String sqlCommand = "select distinct concept from rel_content_concept where title ='"+content+"' and sline = "+sLine+";";
+			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next())
+			{
+				if (conceptList.contains(rs.getString(1)) == false)
+					conceptList.add(rs.getString(1));
+			}
+		}catch (SQLException e) {
+			 e.printStackTrace();
+		}				
+		return conceptList;	
+	}
 
 	public List<Integer> getStartEndLine(String content) {
 		List<Integer> lines = new ArrayList<Integer>();
@@ -183,11 +201,11 @@ public class DB {
 		return lines;	
 	}
 
-	public List<Integer> getConceptEndLines(String content, int line) {
+	public List<Integer> getEndLineBlock(String content, int line) {
 		List<Integer> endLines = new ArrayList<Integer>();
 		try
 		{								
-			String sqlCommand = "select distinct eline from rel_content_concept where title ='"+content+"' and sline = "+line+";";
+			String sqlCommand = "select distinct eline from rel_content_concept where title ='"+content+"' and sline = "+line+" and eline !="+line+";";
 			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
 			ResultSet rs = ps.executeQuery();
 			while (rs.next())
