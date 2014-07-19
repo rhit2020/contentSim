@@ -14,13 +14,13 @@ public class ContentSim {
 		DB db  = new DB();
 		db.connect();
 		// **** for test ****//
-		String[] qList = {"jwhile2"};	
-		String[] eList = {"while_v2","JavaTutorial_4_2_5"};
+//		String[] qList = {"j2D_Arrays1"};	
+//		String[] eList = {"arithmetic_v2"};
 		// **** for test ****//
 		if (db.isConnectedToLabstudy())
         {			
-//			String[] eList = db.getExamples();
-//			String[] qList = db.getQuestions();				
+			String[] eList = db.getExamples();
+			String[] qList = db.getQuestions();				
 			calculateSim(db, qList, eList);
 			db.disconnect();
 		}
@@ -31,29 +31,36 @@ public class ContentSim {
 	}
 
 	private static void calculateSim(DB db, String[] qList, String[] eList) {
+		List<String> qConcepts;
+		List<String> eConcepts;
+		Map<String,Double> qConceptWeight;
+		Map<String,Double> eConceptWeight;
+		List<ArrayList<String>> qtree;
+		List<ArrayList<String>> etree;
+		double sim = 0.0;
 		for (String q : qList)
 		{
+			//creating list of concepts in question
+			qConcepts = db.getConcepts(q);
+			//TFIDF values used as weight of concepts in question
+			qConceptWeight = db.getTFIDF(q);
+			//subtrees in question
+			qtree = getSubtrees(db,q);
 			for (String e : eList) {
-				//creating list of concepts in question and example
-				List<String> qConcepts = db.getConcepts(q);
-				List<String> eConcepts = db.getConcepts(e);
-				/*
-				 * sij = (2a-b)/(2a+b); a: common concepts in two trees/subtrees; b = concepts that are not common in two trees/subtrees
-				 */
-				//TFIDF values used as weight of concepts in question/example
-				Map<String,Double> qConceptWeight = db.getTFIDF(q);
-				Map<String,Double> eConceptWeight = db.getTFIDF(e);
-				//calculate global similarity 
-				double sim = 0.0;
-				//sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
-				//db.insertContentSim(q, e, sim, "GLOBAL:AS");
+				//creating list of concepts in example
+				eConcepts = db.getConcepts(e);
+				//TFIDF values used as weight of concepts in example
+				eConceptWeight = db.getTFIDF(e);
+				//subtrees in example
+				etree = getSubtrees(db,e);
+				//calculate global similarity 				
+				sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
+				db.insertContentSim(q, e, sim, "GLOBAL:AS");
 				//sim = simCosine(db,q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
 				//db.insertContentSim(q, e, sim, "GLOBAL:COS");
 				//calculate local similarity
-				List<ArrayList<String>> qtree = getSubtrees(db,q);
-				List<ArrayList<String>> etree = getSubtrees(db,e);
-				sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
-				db.insertContentSim(q, e, sim, "LOCAL:AS");
+				//sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
+				//db.insertContentSim(q, e, sim, "LOCAL:AS");
 				//sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
 				//db.insertContentSim(q, e, sim, "LOCAL:COS");
 			}
@@ -64,7 +71,8 @@ public class ContentSim {
 		List<Integer> lines = db.getStartEndLine(content);
 		int start = lines.get(0);
 		int end = lines.get(1);
-		ArrayList<String> subtree;
+		ArrayList<String> subtree = null;
+		List<String> adjucentConceptsList = null;
 		for (int line = start; line <= end; line++)
 		{
 			//create subtree for concepts that are in the current line
@@ -76,7 +84,7 @@ public class ContentSim {
 			{
 				//create subtree for the block
 				subtree = new ArrayList<String>();
-				List<String> adjucentConceptsList = db.getAdjacentConcept(content,line,e);
+				adjucentConceptsList = db.getAdjacentConcept(content,line,e);
 				Collections.sort(adjucentConceptsList, new SortByName());
 				for (String adjcon : adjucentConceptsList)
 					subtree.add(adjcon);				
@@ -84,6 +92,28 @@ public class ContentSim {
 					subtreeList.add(subtree);	
 			}			
 		}	
+		//release the space
+		if (lines != null)
+		{
+			for (Integer elem : lines)
+				elem = null;
+			lines.clear();
+			lines = null;
+		}
+		if (subtree != null)
+		{
+			for (String elem : subtree)
+				elem = null;
+			subtree.clear();
+			subtree = null;
+		}
+		if (adjucentConceptsList != null)
+		{
+			for (String elem : adjucentConceptsList)
+				elem = null;
+			adjucentConceptsList.clear();
+			adjucentConceptsList = null;
+		}		
 		return subtreeList;
 	}
 
@@ -222,6 +252,15 @@ public class ContentSim {
 		double a = intersection(qConceptSet, eConceptSet).size();
 		double b = symDifference(qConceptSet, eConceptSet).size();
 		double sim = (2*a-b)/(2*a+b);
+		//release the space for the sets
+		for (String elem : qConceptSet)
+			elem = null;
+		qConceptSet.clear();
+		qConceptSet = null;
+		for (String elem : eConceptSet)
+			elem = null;
+		eConceptSet.clear();
+		eConceptSet = null;
 		return sim;
 	}
 	

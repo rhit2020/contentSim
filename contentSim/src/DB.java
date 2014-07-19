@@ -75,10 +75,12 @@ public class DB {
 			}
 			rs.close();
 			ps.close();
+			rs = null;
+			ps = null;
 		} catch (SQLException e1) {
 			e1.printStackTrace();
 		}	
-		return (String[]) list.toArray();
+		return list.toArray(new String[list.size()]);
 	}
 	
 	public List<String> getConcepts(String content) {
@@ -92,6 +94,8 @@ public class DB {
 				conceptList.add(rs.getString(1));
 			rs.close();
 			ps.close();
+			rs = null;
+			ps = null;
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}				
@@ -110,23 +114,26 @@ public class DB {
 			}
 			rs.close();
 			ps.close();
+			rs = null;
+			ps = null;
 		} catch (SQLException e1) {
 			e1.printStackTrace();			
 		}			
-		return (String[]) list.toArray();
+		return list.toArray(new String[list.size()]);
 	}
 	
 	public void insertContentSim(String question, String example, double sim,String method) {
-//		try
-//		{
-//			String sqlCommand = "insert into rel_content_content_sim (question_content_name,example_content_name,sim,method) values ('"+question+"','"+example+"',"+sim+",'"+method+"')";
-//			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
-//			ps.executeUpdate();
-//			ps.close();			
-//		}catch (SQLException e) {
-//			 e.printStackTrace();
-//		}
-		System.out.println(question+" "+example+" "+method+" "+sim);
+		try
+		{
+			String sqlCommand = "insert into rel_content_content_sim (question_content_name,example_content_name,sim,method) values ('"+question+"','"+example+"',"+sim+",'"+method+"')";
+			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
+			ps.executeUpdate();
+			ps.close();
+			ps = null;
+		}catch (SQLException e) {
+			 e.printStackTrace();
+		}
+		//System.out.println(question+" "+example+" "+method+" "+sim);
 	}
 	
 	public Map<String,Double> getTFIDF(String content) {
@@ -139,6 +146,8 @@ public class DB {
 				weightMap.put(rs.getString(1),rs.getDouble(2));
 			rs.close();
 			ps.close();
+			rs = null;
+			ps = null;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -157,6 +166,10 @@ public class DB {
 				if (conceptList.contains(rs.getString(1)) == false)
 					conceptList.add(rs.getString(1));
 			}
+			rs.close();
+			ps.close();
+			rs = null;
+			ps = null;
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}				
@@ -175,6 +188,10 @@ public class DB {
 				if (conceptList.contains(rs.getString(1)) == false)
 					conceptList.add(rs.getString(1));
 			}
+			rs.close();
+			ps.close();
+			rs = null;
+			ps = null;
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}				
@@ -194,7 +211,11 @@ public class DB {
 				int e = rs.getInt(2);
 				lines.add(s);
 				lines.add(e);
-			}			
+			}
+			rs.close();
+			ps.close();
+			rs = null;
+			ps = null;
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}			
@@ -210,6 +231,10 @@ public class DB {
 			ResultSet rs = ps.executeQuery();
 			while (rs.next())
 				endLines.add(rs.getInt(1));
+			rs.close();
+			ps.close();
+			rs = null;
+			ps = null;
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}			
