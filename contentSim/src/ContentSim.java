@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -194,6 +195,9 @@ public class ContentSim {
 				sumOfWeights += alpha[i][j];
 			
 		sim = sim / sumOfWeights;
+		//release space
+		s = null;
+		alpha = null;
 		return sim;
 	}
 
@@ -240,6 +244,25 @@ public class ContentSim {
 			qDenominator += Math.pow(qvector.get(c), 2); //each element in the example vector is raised to the power of 2 
 		}
 		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
+		//release the space 
+		for (String elem : qConceptSet)
+			elem = null;
+		qConceptSet.clear();
+		qConceptSet = null;
+		for (String elem : eConceptSet)
+			elem = null;
+		eConceptSet.clear();
+		eConceptSet = null;
+		for (Entry<String, Double> entry : evector.entrySet())
+			entry.setValue(null);
+		evector.clear();
+		evector = null;
+		for (Entry<String, Double> entry : qvector.entrySet())
+			entry.setValue(null);
+		qvector.clear();
+		qvector = null;
+		conceptSpace.clear();
+		conceptSpace = null;
 		return sim;	
 	}
 	
