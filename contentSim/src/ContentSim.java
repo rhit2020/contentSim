@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -32,12 +31,12 @@ public class ContentSim {
 	}
 
 	private static void calculateSim(DB db, String[] qList, String[] eList) {
-		List<String> qConcepts;
-		List<String> eConcepts;
-		Map<String,Double> qConceptWeight;
-		Map<String,Double> eConceptWeight;
-		List<ArrayList<String>> qtree;
-		List<ArrayList<String>> etree;
+		List<String> qConcepts = null;
+		List<String> eConcepts = null;
+		Map<String,Double> qConceptWeight = null;
+		Map<String,Double> eConceptWeight = null;
+		List<ArrayList<String>> qtree = null;
+		List<ArrayList<String>> etree = null;
 		double sim = 0.0;
 		for (String q : qList)
 		{
@@ -65,8 +64,16 @@ public class ContentSim {
 				//sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
 				//db.insertContentSim(q, e, sim, "LOCAL:COS");
 			}
-		}		
+		}
+		//release the space
+		destroy(qConcepts);
+		destroy(eConcepts);
+		destroy(qConceptWeight);
+		destroy(eConceptWeight);
+		destroy(qtree);
+		destroy(etree);		
 	}
+	
 	private static List<ArrayList<String>> getSubtrees(DB db, String content) {
 		List<ArrayList<String>> subtreeList = new ArrayList<ArrayList<String>>();
 		List<Integer> lines = db.getStartEndLine(content);
@@ -94,29 +101,11 @@ public class ContentSim {
 			}			
 		}	
 		//release the space
-		if (lines != null)
-		{
-			for (Integer elem : lines)
-				elem = null;
-			lines.clear();
-			lines = null;
-		}
-		if (subtree != null)
-		{
-			for (String elem : subtree)
-				elem = null;
-			subtree.clear();
-			subtree = null;
-		}
-		if (adjucentConceptsList != null)
-		{
-			for (String elem : adjucentConceptsList)
-				elem = null;
-			adjucentConceptsList.clear();
-			adjucentConceptsList = null;
-		}		
+		destroy(lines);
+		destroy(subtree);
+		destroy(adjucentConceptsList);	
 		return subtreeList;
-	}
+	}	
 
 	private static boolean updateSubtreeList(ArrayList<String> subtree, List<ArrayList<String>> subtreeList) {
 		if (subtree.isEmpty() == false && subtreeList.contains(subtree) == false)
@@ -245,27 +234,14 @@ public class ContentSim {
 		}
 		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
 		//release the space 
-		for (String elem : qConceptSet)
-			elem = null;
-		qConceptSet.clear();
-		qConceptSet = null;
-		for (String elem : eConceptSet)
-			elem = null;
-		eConceptSet.clear();
-		eConceptSet = null;
-		for (Entry<String, Double> entry : evector.entrySet())
-			entry.setValue(null);
-		evector.clear();
-		evector = null;
-		for (Entry<String, Double> entry : qvector.entrySet())
-			entry.setValue(null);
-		qvector.clear();
-		qvector = null;
-		conceptSpace.clear();
-		conceptSpace = null;
+		destroy(qConceptSet);
+		destroy(eConceptSet);
+		destroy(evector);
+		destroy(qvector);
+		destroy(conceptSpace);
 		return sim;	
 	}
-	
+
 	/*
 	 * Return value ranges from -1 to 1.
 	 */
@@ -276,15 +252,36 @@ public class ContentSim {
 		double b = symDifference(qConceptSet, eConceptSet).size();
 		double sim = (2*a-b)/(2*a+b);
 		//release the space for the sets
-		for (String elem : qConceptSet)
-			elem = null;
-		qConceptSet.clear();
-		qConceptSet = null;
-		for (String elem : eConceptSet)
-			elem = null;
-		eConceptSet.clear();
-		eConceptSet = null;
+		destroy(qConceptSet);
+		destroy(eConceptSet);
 		return sim;
+	}
+	
+	private static void destroy(Map map) {
+		for (Object entry : map.entrySet())
+			entry = null;
+		map.clear();
+		map = null;
+	}
+	
+	private static void destroy(List list) {
+		if (list != null)
+		{
+			for (Object elem : list)
+				elem = null;
+			list.clear();
+			list = null;
+		}
+	}
+	
+	private static void destroy(Set set) {
+		if (set != null)
+		{
+			for (Object elem : set)
+				elem = null;
+			set.clear();
+			set = null;
+		}
 	}
 	
 	public static <T> Set<T> union(Set<T> setA, Set<T> setB) {
