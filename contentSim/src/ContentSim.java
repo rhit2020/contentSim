@@ -19,7 +19,7 @@ public class ContentSim {
 		db.setup();
 		// **** for test ****//
 //		String[] qList = {"j2D_Arrays1"};	
-//		String[] eList = {"arithmetic_v2"};
+//		String[] eList = {"arithmetic_v2","while_v2"};
 		// **** for test ****//
 		if (db.isReady())
         {			
@@ -60,20 +60,18 @@ public class ContentSim {
 				//calculate global similarity 				
 				sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
 				db.insertContentSim(q, e, sim, "GLOBAL:AS");
-				//sim = simCosine(db,q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
-				//db.insertContentSim(q, e, sim, "GLOBAL:COS");
+				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight); //variant 2: global tree - weight concept
+				db.insertContentSim(q, e, sim, "GLOBAL:COS");
 				//calculate local similarity
-				//sim = localSim(null,null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
-				//db.insertContentSim(q, e, sim, "LOCAL:AS");
-				//sim = localSim(db,q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
-				//db.insertContentSim(q, e, sim, "LOCAL:COS");
+				sim = localSim(null,qtree,etree,"AS",null,null); //variant 1: local subtree - count concept
+				db.insertContentSim(q, e, sim, "LOCAL:AS");
+				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
+				db.insertContentSim(q, e, sim, "LOCAL:COS");
 			}
 		}
-		//release the space
+		//release the space : note: eConceptWeight/qConceptWeight should not be destroyed, they hold reference to the main map
 		destroy(qConcepts);
-		destroy(eConcepts);
-		destroy(qConceptWeight);
-		destroy(eConceptWeight);
+		destroy(eConcepts);		
 		destroy(qtree);
 		destroy(etree);		
 	}
@@ -104,8 +102,7 @@ public class ContentSim {
 					subtreeList.add(subtree);	
 			}			
 		}	
-		//release the space
-		destroy(lines);
+		//release the space: note: lines array hold the reference to the main map, so it should not be destroyed
 		destroy(subtree);
 		destroy(adjucentConceptsList);	
 		return subtreeList;
@@ -143,7 +140,7 @@ public class ContentSim {
 					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
 				}
 			}
-		print(s);//print s[i][j]
+		//print(s);//print s[i][j]
 		//fill alpha
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
@@ -170,7 +167,7 @@ public class ContentSim {
 					}								
 				}				
 			}
-		print(alpha);//print alpha[i][j]
+		//print(alpha);//print alpha[i][j]
 		double sim = 0.0;
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)
