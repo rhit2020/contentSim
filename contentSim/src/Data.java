@@ -67,7 +67,7 @@ public class Data {
 				sline = Integer.parseInt(clmn[1]);
 				eline = Integer.parseInt(clmn[2]);
 				clmn[3] = clmn[3].replace("\"", "");
-				concept = new ArrayList<String>(Arrays.asList(clmn[3].split(",")));
+				concept = new ArrayList<String>(Arrays.asList(clmn[3].split(";")));
 				if (adjacentConceptMap.containsKey(content))
 				{
 					map = adjacentConceptMap.get(content);
@@ -140,7 +140,7 @@ public class Data {
 				content = clmn[0];
 				sline = Integer.parseInt(clmn[1]);
 				clmn[2] = clmn[2].replace("\"", "");
-				elineTXT = clmn[2].split(",");
+				elineTXT = clmn[2].split(";");
 				eline = new ArrayList<Integer>();
 				for (String s : elineTXT)
 					eline.add(Integer.parseInt(s));

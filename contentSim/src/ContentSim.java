@@ -18,8 +18,8 @@ public class ContentSim {
 //		db  = new DB();
 		db.setup();
 		// **** for test ****//
-//		String[] qList = {"j2D_Arrays1"};	
-//		String[] eList = {"arithmetic_v2","while_v2"};
+//		String[] qList = {"jArray2"};	
+//		String[] eList = {"inheritance1_v2"};
 		// **** for test ****//
 		if (db.isReady())
         {			
@@ -68,12 +68,7 @@ public class ContentSim {
 				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight); //variant 2: local subtree - weight concept
 				db.insertContentSim(q, e, sim, "LOCAL:COS");
 			}
-		}
-		//release the space : note: eConceptWeight/qConceptWeight should not be destroyed, they hold reference to the main map
-		destroy(qConcepts);
-		destroy(eConcepts);		
-		destroy(qtree);
-		destroy(etree);		
+		}		
 	}
 	
 	private static List<ArrayList<String>> getSubtrees(String content) {
@@ -102,9 +97,6 @@ public class ContentSim {
 					subtreeList.add(subtree);	
 			}			
 		}	
-		//release the space: note: lines array hold the reference to the main map, so it should not be destroyed
-		destroy(subtree);
-		destroy(adjucentConceptsList);	
 		return subtreeList;
 	}	
 
@@ -234,12 +226,6 @@ public class ContentSim {
 			qDenominator += Math.pow(qvector.get(c), 2); //each element in the example vector is raised to the power of 2 
 		}
 		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
-		//release the space 
-		destroy(qConceptSet);
-		destroy(eConceptSet);
-		destroy(evector);
-		destroy(qvector);
-		destroy(conceptSpace);
 		return sim;	
 	}
 
@@ -252,42 +238,9 @@ public class ContentSim {
 		double a = intersection(qConceptSet, eConceptSet).size();
 		double b = symDifference(qConceptSet, eConceptSet).size();
 		double sim = (2*a-b)/(2*a+b);
-		//release the space for the sets
-		destroy(qConceptSet);
-		destroy(eConceptSet);
 		return sim;
-	}
-	
-	private static void destroy(Map map) {
-		if (map != null)
-		{
-			for (Object entry : map.entrySet())
-				entry = null;
-			map.clear();
-			map = null;
-		}	
-	}
-	
-	private static void destroy(List list) {
-		if (list != null)
-		{
-			for (Object elem : list)
-				elem = null;
-			list.clear();
-			list = null;
-		}
-	}
-	
-	private static void destroy(Set set) {
-		if (set != null)
-		{
-			for (Object elem : set)
-				elem = null;
-			set.clear();
-			set = null;
-		}
-	}
-	
+	}	
+
 	public static <T> Set<T> union(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>(setA);
 		tmp.addAll(setB);
