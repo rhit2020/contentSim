@@ -14,11 +14,11 @@ public class DB {
 	private Connection labstudyConn;
 	private boolean isConnLabstudyValid;
 	
-	public void connect() {
+	public void setup() {
 		connectToLabstudy();		
 	}
 	
-	public void disconnect() {
+	public void close() {
 		disconnectFromLabstudy();
 	}
 	
@@ -39,7 +39,7 @@ public class DB {
 		  }	
 	}	
 		
-	public boolean isConnectedToLabstudy()
+	public boolean isReady()
 	{
 		if (labstudyConn != null) {
 			try {

@@ -10,27 +10,31 @@ import java.util.TreeSet;
 
 public class ContentSim {
 
+	private static Data db;
+	//private static DB db;
 	public static void main(String[] args){
-		DB db  = new DB();
-		db.connect();
+		
+		db = new Data();
+//		db  = new DB();
+		db.setup();
 		// **** for test ****//
 //		String[] qList = {"j2D_Arrays1"};	
 //		String[] eList = {"arithmetic_v2"};
 		// **** for test ****//
-		if (db.isConnectedToLabstudy())
+		if (db.isReady())
         {			
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();				
-			calculateSim(db, qList, eList);
-			db.disconnect();
+			calculateSim(qList, eList);
 		}
 		else
 		{
 			System.out.println("No connection to database!");
 		}
+		db.close();
 	}
 
-	private static void calculateSim(DB db, String[] qList, String[] eList) {
+	private static void calculateSim(String[] qList, String[] eList) {
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
 		Map<String,Double> qConceptWeight = null;
@@ -45,14 +49,14 @@ public class ContentSim {
 			//TFIDF values used as weight of concepts in question
 			qConceptWeight = db.getTFIDF(q);
 			//subtrees in question
-			qtree = getSubtrees(db,q);
+			qtree = getSubtrees(q);
 			for (String e : eList) {
 				//creating list of concepts in example
 				eConcepts = db.getConcepts(e);
 				//TFIDF values used as weight of concepts in example
 				eConceptWeight = db.getTFIDF(e);
 				//subtrees in example
-				etree = getSubtrees(db,e);
+				etree = getSubtrees(e);
 				//calculate global similarity 				
 				sim = simAssociationCoefficient(qConcepts,eConcepts); //variant 1: global tree - count concept
 				db.insertContentSim(q, e, sim, "GLOBAL:AS");
@@ -74,7 +78,7 @@ public class ContentSim {
 		destroy(etree);		
 	}
 	
-	private static List<ArrayList<String>> getSubtrees(DB db, String content) {
+	private static List<ArrayList<String>> getSubtrees(String content) {
 		List<ArrayList<String>> subtreeList = new ArrayList<ArrayList<String>>();
 		List<Integer> lines = db.getStartEndLine(content);
 		int start = lines.get(0);
@@ -116,7 +120,7 @@ public class ContentSim {
 	/*
 	 * Return value ranges from -1 to 1. 
 	 */
-	private static double localSim(DB db, String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
+	private static double localSim(String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
 			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight)
 	{
 		double [][] s = new double[qtree.size()][etree.size()]; 
@@ -136,7 +140,7 @@ public class ContentSim {
 				}
 				else if (variant.equals("COS"))
 				{
-					s[i][j] = simCosine(db,question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
+					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight);
 				}
 			}
 		print(s);//print s[i][j]
@@ -211,7 +215,7 @@ public class ContentSim {
 	/* 
 	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
 	 */
-	private static double simCosine(DB db, String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight) {
+	private static double simCosine(String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight) {
 		//create concept space by union of two sets. Set drops repeated elements and contains unique values
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
@@ -258,10 +262,13 @@ public class ContentSim {
 	}
 	
 	private static void destroy(Map map) {
-		for (Object entry : map.entrySet())
-			entry = null;
-		map.clear();
-		map = null;
+		if (map != null)
+		{
+			for (Object entry : map.entrySet())
+				entry = null;
+			map.clear();
+			map = null;
+		}	
 	}
 	
 	private static void destroy(List list) {
