@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-public class ContentSim {
+public class EvaluationSim {
 
 	private static Data db;
 	//private static DB db;
@@ -26,7 +26,8 @@ public class ContentSim {
         {			
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();				
-			calculateStaticSim(qList, eList);
+			calculateNonPersonalizedSim(qList, eList);
+			calculatePersonalizedSim();
 		}
 		else
 		{
@@ -35,7 +36,21 @@ public class ContentSim {
 		db.close();
 	}
 
-	private static void calculateStaticSim(String[] qList, String[] eList) {
+	private static void calculatePersonalizedSim() {
+		//calculate pglobal similarity 				
+		sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
+		db.insertContentSim(q, e, sim, "PGLOBAL:AS");
+		sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
+		db.insertContentSim(q, e, sim, "PGLOBAL:COS");
+		//calculate plocal similarity
+		sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
+		db.insertContentSim(q, e, sim, "PLOCAL:AS");
+		sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
+		db.insertContentSim(q, e, sim, "PLOCAL:COS");
+		
+	}
+
+	private static void calculateNonPersonalizedSim(String[] qList, String[] eList) {
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
 		Map<String,Double> qConceptWeight = null;
