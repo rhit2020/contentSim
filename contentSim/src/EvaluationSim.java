@@ -11,46 +11,37 @@ import java.util.TreeSet;
 public class EvaluationSim {
 
 	private static Data db;
-	//private static DB db;
+	
 	public static void main(String[] args){
-		
-		//get level of user knowledge in all concepts
 		db = new Data();
-//		db  = new DB();
-		db.setup();
-		// **** for test ****//
-//		String[] qList = {"jArray2"};	
-//		String[] eList = {"inheritance1_v2"};
-		// **** for test ****//
 		if (db.isReady())
-        {			
-			String[] eList = db.getExamples();
-			String[] qList = db.getQuestions();				
-			calculateNonPersonalizedSim(qList, eList);
-			calculatePersonalizedSim();
+        {	
+			db.setup();
+			
 		}
 		else
 		{
-			System.out.println("No connection to database!");
+			System.out.println("System is not ready!");
 		}
 		db.close();
+
 	}
 
 	private static void calculatePersonalizedSim() {
-		//calculate pglobal similarity 				
-		sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
-		db.insertContentSim(q, e, sim, "PGLOBAL:AS");
-		sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
-		db.insertContentSim(q, e, sim, "PGLOBAL:COS");
-		//calculate plocal similarity
-		sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
-		db.insertContentSim(q, e, sim, "PLOCAL:AS");
-		sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
-		db.insertContentSim(q, e, sim, "PLOCAL:COS");
+//		//calculate pglobal similarity 				
+//		sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
+//		db.insertContentSim(q, e, sim, "PGLOBAL:AS");
+//		sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
+//		db.insertContentSim(q, e, sim, "PGLOBAL:COS");
+//		//calculate plocal similarity
+//		sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
+//		db.insertContentSim(q, e, sim, "PLOCAL:AS");
+//		sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
+//		db.insertContentSim(q, e, sim, "PLOCAL:COS");
 		
 	}
 
-	private static void calculateNonPersonalizedSim(String[] qList, String[] eList) {
+	private static void calculatePersonalizedSim(String[] qList, String[] eList) {
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
 		Map<String,Double> qConceptWeight = null;
@@ -74,15 +65,15 @@ public class EvaluationSim {
 				//subtrees in example
 				etree = getSubtrees(e);
 				//calculate global similarity 				
-				sim = simAssociationCoefficient(qConcepts,eConcepts,false); //variant 1: global tree - count concept
-				db.insertContentSim(q, e, sim, "GLOBAL:AS");
-				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,false); //variant 2: global tree - weight concept
-				db.insertContentSim(q, e, sim, "GLOBAL:COS");
+				sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
+				db.insertContentSim(q, e, sim, "PGLOBAL:AS");
+				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
+				db.insertContentSim(q, e, sim, "PGLOBAL:COS");
 				//calculate local similarity
-				sim = localSim(null,qtree,etree,"AS",null,null,false); //variant 1: local subtree - count concept
-				db.insertContentSim(q, e, sim, "LOCAL:AS");
-				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,false); //variant 2: local subtree - weight concept
-				db.insertContentSim(q, e, sim, "LOCAL:COS");
+				sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
+				db.insertContentSim(q, e, sim, "PLOCAL:AS");
+				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
+				db.insertContentSim(q, e, sim, "PLOCAL:COS");
 			}
 		}		
 	}
