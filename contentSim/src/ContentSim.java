@@ -17,20 +17,20 @@ public class ContentSim {
 		//get level of user knowledge in all concepts
 		db = new Data();
 //		db  = new DB();
-		db.setup();
 		// **** for test ****//
 //		String[] qList = {"jArray2"};	
 //		String[] eList = {"inheritance1_v2"};
 		// **** for test ****//
 		if (db.isReady())
-        {			
+        {	
+			db.setup();
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();				
 			calculateStaticSim(qList, eList);
 		}
 		else
 		{
-			System.out.println("No connection to database!");
+			System.out.println("System is not ready!");
 		}
 		db.close();
 	}
