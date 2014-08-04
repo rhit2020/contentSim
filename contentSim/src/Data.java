@@ -29,26 +29,36 @@ public class Data {
 	private Map<String,List<Integer>> startEndLineMap = null; //keys are contents, values: list[0]:start line; list[1]:end line
 	private Map<String,Map<Integer,List<Integer>>> blockEndLineMap = null; //keys are contents, values: a map with key:start line and list of end lines of the concept in that start line
 	private Map<String,Map<Integer,Map<Integer,List<String>>>> adjacentConceptMap = null; //keys are contents, values: a map with key:start line and a map as value(key:end line, value, List of concepts in that start and end line)
-	private File file; //output file where similarity results are stored
-	private FileWriter fw;
-	BufferedWriter bw;
+	private File fileSim,fileConceptLevels; //output file where similarity results are stored
+	private FileWriter fwSim,fwConceptLevels;
+	BufferedWriter bwSim,bwConceptLevels;	
     //maps for using in the evaluation process
-	private Map<String,String> difficultyMap;
+	private Map<String,String> difficultyMap; //content_name,difficulty
 	private Map<String,List<String>> topicMap; //there is one content currently that has two topics.
-	private Map<String,Double> pretestMap;
+	private Map<String,Double> pretestMap; //userid, pretest
+	private Map<String,Map<String,Map<String,Map<String,Double>>>> conceptLevelMap; //Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
 	private Map<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>> ratingMap;//Map<pretest_level,Map<question,Map<Map<concept,knowledge>,Map<example,List<rating>>>>>
 	
 	public void setup() {
 		String path = "./resources/";
-		file = new File(path+"output.txt");
+		fileSim = new File(path+"outputSim.txt");
 		try {
-			if (!file.exists())
-				file.createNewFile();
-			fw = new FileWriter(file.getAbsoluteFile());
-			bw = new BufferedWriter(fw);
+			if (!fileSim.exists())
+				fileSim.createNewFile();
+			fwSim = new FileWriter(fileSim.getAbsoluteFile());
+			bwSim = new BufferedWriter(fwSim);
 		} catch (IOException e) {
 				e.printStackTrace();
-		}
+		}	
+		fileConceptLevels = new File(path+"outputConceptLevels.csv");
+		try {
+			if (!fileConceptLevels.exists())
+				fileConceptLevels.createNewFile();
+			fwConceptLevels = new FileWriter(fileConceptLevels.getAbsoluteFile());
+			bwConceptLevels = new BufferedWriter(fwConceptLevels);
+		} catch (IOException e) {
+				e.printStackTrace();
+		}		
 		readContentData(path+"content.csv");
 		readConceptData(path+"content_concept.csv");
 		readStartEndlineData(path+"content_start_end.csv");
@@ -56,12 +66,212 @@ public class Data {
 		readAdjacentConcept(path+"adjacent_concept.csv");
 		readDifficulty(path+"difficutly.csv"); //content,difficulty
 		readTopic(path+"topic.csv");//content, topic
-		readPretest(path+"pretest.csv");//user,pretest
+		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
+		createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
+		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
 		readRatings(path+"ratings.csv");//user,group,datentime,question,example,rating (0,1,2,3)
 	}
 	
+	private void createConceptLevelFile(String path) {
+		//Step1: save distinct group,user,datentime 
+		Map<String, Map<String,List<String>>> gud = new HashMap<String, Map<String, List<String>>>(); //g:group u: user d:datentime  // Map<group, Map<user,List<datentime>>>
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String group;
+			String user;
+			String datentime;
+			Map<String, List<String>> ud;
+			List<String> dList;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				user = clmn[0];
+				group = clmn[1];
+				datentime = clmn[2];
+				if (gud.containsKey(group) == false)
+				{
+					ud = new HashMap<String, List<String>>();
+					dList = new ArrayList<String>();
+					dList.add(datentime);
+					ud.put(user,dList);
+					gud.put(group, ud);
+				}
+				else{
+					ud = gud.get(group);
+					if (ud.containsKey(user) == false)
+					{
+						dList = new ArrayList<String>();
+						dList.add(datentime);
+						ud.put(user,dList);
+					}
+					else
+					{
+						dList = ud.get(user);
+						if (dList.contains(datentime) == false)
+							dList.add(datentime);
+					}
+				}				
+			} 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		int count = 0;
+		for (String group : gud.keySet())
+			for (String user : gud.get(group).keySet())
+				count += gud.get(group).get(user).size();
+		System.out.println("gud:"+count);
+		//write the user knowledge for each group,user,datentime to the output file
+		List<String> dList;
+		Map<String, Double> conceptLeveles;
+		count = 0;
+		//write to the file	
+		try {
+			for (String group : gud.keySet())
+				for (String user : gud.get(group).keySet())
+				{
+					dList = gud.get(group).get(user);
+					for (String datentime : dList)
+					{
+						conceptLeveles = getConceptLevels(user,"java",group,datentime);
+						for (String concept : conceptLeveles.keySet())
+						{
+								bwConceptLevels.write(group+","+user+","+datentime+","+concept+","+conceptLeveles.get(concept));
+								bwConceptLevels.newLine();
+								bwConceptLevels.flush();
+								count += 1;
+						} 
+					}
+				}			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("total line in outputConceptLevels:"+count);
+		//destroy the local map
+		for (Map<String,List<String>> map : gud.values())
+		{
+			if (map != null)
+			{
+				for (List<String> list : map.values())
+				{
+					if (list != null)
+						destroy(list);
+				}
+				destroy(map);
+			}
+		}
+		destroy(gud);		
+	}
+
+	private void readConceptLevels(String path) {
+		//Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
+		//group,user,datentime,concept,knowledge
+		conceptLevelMap = new HashMap<String,Map<String,Map<String,Map<String,Double>>>>();
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String group;
+			String user;
+			String datentime;
+			String concept;
+			double knowledge;
+			Map<String,Map<String,Map<String,Double>>> groupMap;
+			Map<String,Map<String,Double>> userMap;
+			Map<String,Double> knowledgeMap;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				group = clmn[0];
+				user = clmn[1];
+				datentime = clmn[2];
+				concept = clmn[3];
+				knowledge = Double.parseDouble(clmn[4]);
+				if (conceptLevelMap.containsKey(group) == false)
+				{
+					knowledgeMap = new HashMap<String,Double>();
+					knowledgeMap.put(concept,knowledge);
+					userMap = new HashMap<String,Map<String,Double>>();
+					userMap.put(datentime,knowledgeMap);
+					groupMap = new HashMap<String,Map<String,Map<String,Double>>>();
+					groupMap.put(user,userMap);
+					conceptLevelMap.put(group, groupMap);
+				}
+				else
+				{
+					groupMap = conceptLevelMap.get(group);
+					if (groupMap.containsKey(user) == false)
+					{
+						knowledgeMap = new HashMap<String,Double>();
+						knowledgeMap.put(concept,knowledge);
+						userMap = new HashMap<String,Map<String,Double>>();
+						userMap.put(datentime,knowledgeMap);
+						groupMap.put(user,userMap);
+					}
+					else{
+						userMap = groupMap.get(user);
+						if (userMap.containsKey(datentime) == false)
+						{
+							knowledgeMap = new HashMap<String,Double>();
+							knowledgeMap.put(concept,knowledge);
+							userMap.put(datentime,knowledgeMap);
+						}
+						else
+						{
+							knowledgeMap = userMap.get(datentime);
+							knowledgeMap.put(concept,knowledge);							
+						}
+					}
+				}
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		int count = 0;
+		for (String group : conceptLevelMap.keySet())
+			for (String user: conceptLevelMap.get(group).keySet())
+				for (String datentime : conceptLevelMap.get(group).get(user).keySet())
+					count += conceptLevelMap.get(group).get(user).get(datentime).keySet().size();
+		System.out.println("conceptLevelMap:"+count);								
+	}
+
 	private void readRatings(String path) {
-		//user,datentime,question,example,rating (0,1,2,3)
+		//user,group,datentime,question,example,rating (0,1,2,3)
 		ratingMap = new HashMap<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>>();
 		BufferedReader br = null;
 		String line = "";
@@ -99,7 +309,7 @@ public class Data {
 				//map ratings (0,1,2,3) to (-2,-1,0,+1,+2) to penalize examples that are not helpful 
 				Nrating = getNrating(rating);
 				pretest = getPretestLevel(user);
-				knowledgeMap = getConceptLevels(user, "java", group,datentime);
+				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
 					list = new ArrayList<Integer>();
@@ -165,8 +375,18 @@ public class Data {
 					e.printStackTrace();
 				}
 			}
-		}		
-		System.out.println("....:");						
+		}	
+		int count = 0;
+		for (String pretest : ratingMap.keySet())
+			for (String question : ratingMap.get(pretest).keySet())
+				for (Map<String,List<Integer>> exampleMap : ratingMap.get(pretest).get(question).values())
+					for (String example : exampleMap.keySet())
+						count += exampleMap.get(example).size();						
+		System.out.println("ratingMap:"+count);						
+	}
+
+	private Map<String, Double> getKnowledgeMap(String user, String group, String datentime) {
+		return conceptLevelMap.get(group).get(user).get(datentime);
 	}
 
 	private int getNrating(int rating) {
@@ -611,14 +831,28 @@ public class Data {
 
 	public void close() {
 		try {
-			file = null; // destroy the file for writing the output
-			if (fw != null) {
-				fw.close();
-				fw = null;
+			fileSim = null; // destroy the file for writing the output
+			if (fwSim != null) {
+				fwSim.close();
+				fwSim = null;
 			}
-			if (bw != null) {
-				bw.close();
-				bw = null;
+			if (bwSim != null) {
+				bwSim.close();
+				bwSim = null;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		try {
+			fileConceptLevels = null; // destroy the file for writing the output
+			if (fwConceptLevels != null) {
+				fwConceptLevels.close();
+				fwConceptLevels = null;
+			}
+			if (bwConceptLevels != null) {
+				bwConceptLevels.close();
+				bwConceptLevels = null;
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -667,16 +901,76 @@ public class Data {
 						if (map2 != null)
 						{
 							for (List<String> list : map2.values()) //destroy the list in map
-								destroy(list);							
+								destroy(list);	
+							destroy(map2); //destroy the map2
 						}
-						destroy(map2); //destroy the map2
 					}
 					destroy(map); //destroy map
 				}
 			}
 			destroy(adjacentConceptMap);
 		}
-	}	
+		if (difficultyMap != null)			
+			destroy(difficultyMap); //destroy the map
+		if (topicMap != null)
+		{
+			for (List<String> list : topicMap.values())
+				destroy(list);
+			destroy(topicMap);
+		}
+		if (pretestMap != null)
+			destroy(pretestMap);
+		
+		if (conceptLevelMap != null)
+		{
+			for (Map<String,Map<String,Map<String,Double>>> groupMap : conceptLevelMap.values())
+			{
+				if (groupMap != null)
+				{
+					for (Map<String,Map<String,Double>> userMap : groupMap.values())
+					{
+						if (userMap != null)
+						{
+							for (Map<String,Double> kMap : userMap.values())
+								destroy(kMap);
+							destroy(userMap);
+						}
+					}
+					destroy(groupMap);
+				}
+			}
+			destroy(conceptLevelMap);
+		}
+		if (ratingMap != null)
+		{
+			for (Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>> pretestMap : ratingMap.values())
+			{
+				if (pretestMap != null)
+				{
+					for (Map<Map<String,Double>,Map<String,List<Integer>>> questionMap : pretestMap.values())
+					{
+						if (questionMap != null)
+						{
+							for (Map<String,Double> kMap : questionMap.keySet())
+								destroy(kMap);
+							for (Map<String,List<Integer>> exampleMap : questionMap.values())
+							{
+								if (exampleMap != null)
+								{
+									for (List<Integer> list : exampleMap.values())
+										destroy(list);
+								}
+								destroy(exampleMap);
+							}
+							destroy(questionMap);
+						}
+					}
+					destroy(pretestMap);
+				}				
+			}
+			destroy(ratingMap);
+		}		
+	}
 	
 	private void destroy(Map map) {
 		if (map != null)
@@ -732,9 +1026,9 @@ public class Data {
 	
 	public void insertContentSim(String question, String example, double sim, String method) {
 		try {
-			bw.write(question+"\t"+example+"\t"+sim+"\t"+method);
-			bw.newLine();
-		    bw.flush();
+			bwSim.write(question+"\t"+example+"\t"+sim+"\t"+method);
+			bwSim.newLine();
+		    bwSim.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -828,7 +1122,8 @@ public class Data {
 	
 	//--- methods for processing user knowledge ---//
 	// CALLING A UM SERVICE
-    public HashMap<String, Double> getConceptLevels(String usr, String domain,String grp) {
+    public HashMap<String, Double> getConceptLevels(String usr, String domain,String grp, String datentime) {
+    	...
         HashMap<String, Double> user_concept_knowledge_levels = new HashMap<String, Double>();
         try {
             URL url = null;
