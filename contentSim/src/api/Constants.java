@@ -10,7 +10,7 @@ public class Constants {
 		public static final String PASSWORD = "student";		
 	}
 	
-	public static final String server = "http://adapt2.sis.pitt.edu";
+	public static final String server = "http://localhost:8080";//local instance of the modified cbum project
 	public static final String conceptLevelsServiceURL = server + "/cbum/ReportManager";
 	
 	public static final class Pretest{

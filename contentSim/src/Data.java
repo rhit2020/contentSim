@@ -841,7 +841,6 @@ public class Data {
 				bwSim = null;
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		try {
@@ -855,7 +854,6 @@ public class Data {
 				bwConceptLevels = null;
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -1123,7 +1121,6 @@ public class Data {
 	//--- methods for processing user knowledge ---//
 	// CALLING A UM SERVICE
     public HashMap<String, Double> getConceptLevels(String usr, String domain,String grp, String datentime) {
-    	...
         HashMap<String, Double> user_concept_knowledge_levels = new HashMap<String, Double>();
         try {
             URL url = null;
