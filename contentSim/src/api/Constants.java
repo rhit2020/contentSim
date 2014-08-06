@@ -18,4 +18,42 @@ public class Constants {
 		public static final int AVE_MIN = 3;
 		public static final int HIGH_MIN = 6;
 	}
+	
+	public static enum Method 
+	{
+		GLOBAL_AS (Group.STATIC) { public String toString(){return "GLOBAL::AS";}},
+		GLOBAL_COS (Group.STATIC){ public String toString(){return "GLOBAL::COS";}}, 
+		LOCAL_AS (Group.STATIC){ public String toString(){return "LOCAL::AS";}}, 
+		LOCAL_COS (Group.STATIC){ public String toString(){return "LOCAL::COS";}},
+		P_GLOBAL_AS (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::AS";}},
+		P_GLOBAL_COS (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS";}}, 
+		P_LOCAL_AS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS";}}, 
+		P_LOCAL_COS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS";}};
+		
+		private Group group;
+		Method(Group group) {
+	        this.group = group;
+	    }
+		public enum Group {
+		        STATIC,
+		        PERSONALZIED;		       
+		}
+		 public boolean isInGroup(Group group) {
+		        return this.group == group;
+		 }
+	};
+//	public static enum Static_Method {
+//		GLOBAL_AS { public String toString(){return "GLOBAL::AS";}},
+//		GLOBAL_COS { public String toString(){return "GLOBAL::COS";}}, 
+//		LOCAL_AS { public String toString(){return "LOCAL::AS";}}, 
+//		LOCAL_COS { public String toString(){return "LOCAL::COS";}},		
+//	}
+//	public static enum P_Method {
+//		P_GLOBAL_AS { public String toString(){return "P::GLOBAL::AS";}},
+//		P_GLOBAL_COS { public String toString(){return "P::GLOBAL::COS";}}, 
+//		P_LOCAL_AS { public String toString(){return "P::LOCAL::AS";}}, 
+//		P_LOCAL_COS { public String toString(){return "P::LOCAL::COS";}},	
+//	}
+
+	public static final int nDCG_LOG_BASE = 2;
 }

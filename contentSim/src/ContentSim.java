@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import api.Constants.Method;;
+
 public class ContentSim {
 
 	private static Data db;
@@ -25,8 +27,21 @@ public class ContentSim {
         {	
 			db.setup();
 			String[] eList = db.getExamples();
-			String[] qList = db.getQuestions();				
-			calculateStaticSim(qList, eList);
+			String[] qList = db.getQuestions();
+			HashMap<String,Double> rankMap;
+			for (Method method : Method.values())
+			{
+				if (method.isInGroup(Method.Group.STATIC))
+				{
+					for (String q : qList)
+					{					
+						rankMap = calculateStaticSim(q, eList,method,null);
+						for (String e : rankMap.keySet())
+							db.insertContentSim(q, e, rankMap.get(q), method.toString());
+					}
+				}
+				
+			}
 		}
 		else
 		{
@@ -35,7 +50,7 @@ public class ContentSim {
 		db.close();
 	}
 
-	private static void calculateStaticSim(String[] qList, String[] eList) {
+	public static HashMap<String, Double> calculateStaticSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
 		Map<String,Double> qConceptWeight = null;
@@ -43,33 +58,56 @@ public class ContentSim {
 		List<ArrayList<String>> qtree = null;
 		List<ArrayList<String>> etree = null;
 		double sim = 0.0;		
-		for (String q : qList)
-		{
-			//creating list of concepts in question
-			qConcepts = db.getConcepts(q);
-			//TFIDF values used as weight of concepts in question
-			qConceptWeight = db.getTFIDF(q);
-			//subtrees in question
-			qtree = getSubtrees(q);
-			for (String e : eList) {
-				//creating list of concepts in example
-				eConcepts = db.getConcepts(e);
-				//TFIDF values used as weight of concepts in example
-				eConceptWeight = db.getTFIDF(e);
-				//subtrees in example
-				etree = getSubtrees(e);
-				//calculate global similarity 				
-				sim = simAssociationCoefficient(qConcepts,eConcepts,false); //variant 1: global tree - count concept
-				db.insertContentSim(q, e, sim, "GLOBAL:AS");
-				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,false); //variant 2: global tree - weight concept
-				db.insertContentSim(q, e, sim, "GLOBAL:COS");
-				//calculate local similarity
-				sim = localSim(null,qtree,etree,"AS",null,null,false); //variant 1: local subtree - count concept
-				db.insertContentSim(q, e, sim, "LOCAL:AS");
-				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,false); //variant 2: local subtree - weight concept
-				db.insertContentSim(q, e, sim, "LOCAL:COS");
+		HashMap<String,Double> rankMap = new HashMap<String,Double>();
+		//creating list of concepts in question
+		qConcepts = db.getConcepts(q);
+		//TFIDF values used as weight of concepts in question
+		qConceptWeight = db.getTFIDF(q);
+		//subtrees in question
+		qtree = getSubtrees(q);
+		for (String e : eList) {
+			sim = 0.0;
+			//creating list of concepts in example
+			eConcepts = db.getConcepts(e);
+			//TFIDF values used as weight of concepts in example
+			eConceptWeight = db.getTFIDF(e);
+			//subtrees in example
+			etree = getSubtrees(e);
+			//calculate global similarity 				
+			switch(method){
+			//static methods
+			case GLOBAL_AS:
+			{
+				sim = simAssociationCoefficient(qConcepts,eConcepts,false,kmap); //variant 1: global tree - count concept	
+				break;
 			}
-		}		
+			case GLOBAL_COS:
+			{
+				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,false,kmap); //variant 2: global tree - weight concept
+				break;
+			}
+			case LOCAL_AS:
+			{
+				sim = localSim(null,qtree,etree,"AS",null,null,false,kmap); //variant 1: local subtree - count concept
+				break;
+			}
+			case LOCAL_COS:
+			{
+				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,false,kmap); //variant 2: local subtree - weight concept
+				break;
+			}
+			//personalized methods
+			case P_GLOBAL_AS:
+			{
+				sim = simAssociationCoefficient(qConcepts,eConcepts,false,kmap); //variant 1: global tree - count concept	
+				break;
+			}
+			default:
+				break;								
+			}
+			rankMap.put(e, sim);
+		}	
+		return rankMap;
 	}
 	
 	private static List<ArrayList<String>> getSubtrees(String content) {
@@ -111,7 +149,7 @@ public class ContentSim {
 	 * Return value ranges from -1 to 1. 
 	 */
 	private static double localSim(String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
-			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, boolean isPersonalized)
+			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, boolean isPersonalized, Map<String, Double> kmap)
 	{
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
@@ -126,11 +164,11 @@ public class ContentSim {
 			{
 				if (variant.equals("AS"))
 				{
-					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j),isPersonalized);
+					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j),isPersonalized,kmap);
 				}
 				else if (variant.equals("COS"))
 				{
-					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,isPersonalized);
+					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,isPersonalized,kmap);
 				}
 			}
 		//print(s);//print s[i][j]
@@ -205,26 +243,26 @@ public class ContentSim {
 	/* 
 	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
 	 */
-	private static double simCosine(String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, boolean isPersonalized) {
+	private static double simCosine(String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, boolean isPersonalized, Map<String, Double> kmap) {
 		//create concept space by union of two sets. Set drops repeated elements and contains unique values
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
 		List<String> conceptSpace = new ArrayList<String>(union(qConceptSet, eConceptSet));
 		HashMap<String,Double> evector = new HashMap<String,Double>();// concept vector for example
 		HashMap<String,Double> qvector = new HashMap<String,Double>(); // concept vector for question
-		if (isPersonalized == false)
+		for (String c : conceptSpace)
 		{
-			for (String c : conceptSpace)
+			if (isPersonalized == false)
 			{
 				evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
-				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);			
+				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);	
 			}
+			else
+			{
+				evector.put(c, eConceptSet.contains(c)?1-kmap.get(c):0);
+				qvector.put(c, qConceptSet.contains(c)?1-kmap.get(c):0);	
+			}				
 		}
-		else 
-		{
-			//TODO implement the personalized
-		}
-		
 		double numerator = 0.0;
 		double eDemoninator = 0.0;
 		double qDenominator = 0.0;
@@ -241,7 +279,7 @@ public class ContentSim {
 	/*
 	 * Return value ranges from -1 to 1.
 	 */
-	public static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts, boolean isPersonalized){
+	private static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts, boolean isPersonalized, Map<String, Double> kmap){
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
 		double a = 0.0,b = 0.0;
@@ -252,19 +290,24 @@ public class ContentSim {
 		}
 		else
 		{
-			//TODO impelement the personalzied version
+			Set<String> intersectionSet = intersection(qConceptSet, eConceptSet);
+			Set<String> symDifferenceSet = intersection(qConceptSet, eConceptSet);
+			for (String concept : intersectionSet)
+				a += (1-kmap.get(concept));
+			for (String concept : symDifferenceSet)
+				b += (1-kmap.get(concept));
 		}
 		double sim = (2*a-b)/(2*a+b);
 		return sim;
 	}	
 
-	public static <T> Set<T> union(Set<T> setA, Set<T> setB) {
+	private static <T> Set<T> union(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>(setA);
 		tmp.addAll(setB);
 		return tmp;
 	}
 
-	public static <T> Set<T> intersection(Set<T> setA, Set<T> setB) {
+	private static <T> Set<T> intersection(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>();
 		for (T x : setA)
 			if (setB.contains(x))
@@ -272,13 +315,13 @@ public class ContentSim {
 		return tmp;
 	}
 
-	public static <T> Set<T> difference(Set<T> setA, Set<T> setB) {
+	private static <T> Set<T> difference(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>(setA);
 		tmp.removeAll(setB);
 		return tmp;
 	}
 
-	public static <T> Set<T> symDifference(Set<T> setA, Set<T> setB) {
+	private static <T> Set<T> symDifference(Set<T> setA, Set<T> setB) {
 		Set<T> tmpA;
 		Set<T> tmpB;
 		tmpA = union(setA, setB);
@@ -286,7 +329,7 @@ public class ContentSim {
 		return difference(tmpA, tmpB);
 	}
 	
-	public static class SortByName implements Comparator<String> {
+	private static class SortByName implements Comparator<String> {
 	    public int compare(String s1, String s2) {
 	        return s1.compareTo(s2);
 	    }

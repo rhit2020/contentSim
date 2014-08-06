@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -29,9 +30,9 @@ public class Data {
 	private Map<String,List<Integer>> startEndLineMap = null; //keys are contents, values: list[0]:start line; list[1]:end line
 	private Map<String,Map<Integer,List<Integer>>> blockEndLineMap = null; //keys are contents, values: a map with key:start line and list of end lines of the concept in that start line
 	private Map<String,Map<Integer,Map<Integer,List<String>>>> adjacentConceptMap = null; //keys are contents, values: a map with key:start line and a map as value(key:end line, value, List of concepts in that start and end line)
-	private File fileSim,fileConceptLevels; //output file where similarity results are stored
-	private FileWriter fwSim,fwConceptLevels;
-	BufferedWriter bwSim,bwConceptLevels;	
+	private File fileSim,fileConceptLevels,fileMeasures; //output file where similarity results are stored
+	private FileWriter fwSim,fwConceptLevels,fwMeasures;
+	BufferedWriter bwSim,bwConceptLevels,bwMeasures;	
     //maps for using in the evaluation process
 	private Map<String,String> difficultyMap; //content_name,difficulty
 	private Map<String,List<String>> topicMap; //there is one content currently that has two topics.
@@ -47,6 +48,15 @@ public class Data {
 				fileSim.createNewFile();
 			fwSim = new FileWriter(fileSim.getAbsoluteFile());
 			bwSim = new BufferedWriter(fwSim);
+		} catch (IOException e) {
+				e.printStackTrace();
+		}	
+		fileMeasures = new File(path+"outputMeasures.txt");
+		try {
+			if (!fileMeasures.exists())
+				fileMeasures.createNewFile();
+			fwMeasures = new FileWriter(fileMeasures.getAbsoluteFile());
+			bwMeasures = new BufferedWriter(fwMeasures);
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
@@ -844,6 +854,19 @@ public class Data {
 			e.printStackTrace();
 		}
 		try {
+			fileMeasures = null; // destroy the file for writing the output
+			if (fwMeasures != null) {
+				fwMeasures.close();
+				fwMeasures = null;
+			}
+			if (bwMeasures != null) {
+				bwMeasures.close();
+				bwMeasures = null;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		try {
 			fileConceptLevels = null; // destroy the file for writing the output
 			if (fwConceptLevels != null) {
 				fwConceptLevels.close();
@@ -1188,4 +1211,55 @@ public class Data {
         Node nValue = (Node) nlList.item(0);
         return nValue.getNodeValue();
     }
+
+	public Set<String> getRatedQuestions(String pretest) {
+		return ratingMap.get(pretest).keySet();
+	}
+
+	public Set<Map<String, Double>> getKnowledgeLevels(String pretest,String question) {
+		return ratingMap.get(pretest).get(question).keySet();
+	}
+
+	public Set<String> getPretestCategories() {
+		return ratingMap.keySet();
+	}
+
+	public void writeToFile(String question,String pretest,String method, double AP, double nDCG, double QMeasure) {
+		try {
+			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"AP"+"\t"+AP);
+			bwMeasures.newLine();
+			bwMeasures.flush();
+			//
+			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"nDCG"+"\t"+nDCG);
+			bwMeasures.newLine();
+			bwMeasures.flush();
+			//
+			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"QMeasure"+"\t"+QMeasure);
+			bwMeasures.newLine();
+			bwMeasures.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	public boolean isJudged(String question, String example, String pretest) {
+		boolean isJudged = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).containsKey(example);
+		return isJudged;
+	}
+	
+	public double getAvgRate(String question, String example, String pretest)
+	{
+		List<Integer> rateList = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).get(example);
+		double sum = 0.0;
+		for (int r : rateList)
+			sum += r;
+		double avg = sum/rateList.size();
+		return avg;
+	}
+
+	public Set<String> getRelevantExampleList(String pretest, String question) {
+		Set<String> relList = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).keySet();
+		return relList;
+	}
 }

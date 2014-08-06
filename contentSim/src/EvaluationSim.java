@@ -1,12 +1,10 @@
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
+import api.Constants.Method;
 
 public class EvaluationSim {
 
@@ -17,7 +15,49 @@ public class EvaluationSim {
 		if (db.isReady())
         {	
 			db.setup();
-			
+			Set<String> pretestList = db.getPretestCategories();
+			Map<Integer, Map<String, Double>> condensedSysRankMap;	// Map<rank,Map<example,avgRating>>	
+			Map<Integer, Map<String, Double>> IdealRankMap;
+			Set<String> ratedQList;
+			Set<Map<String, Double>> conceptLevelMap;
+			int totalRelevantExample;
+			double AP,nDCG,QMeasure;
+			//evaluate non-personalized methods
+			for (Method method : Method.values())
+			{
+				for (String pretest : pretestList)
+				{	
+					ratedQList = db.getRatedQuestions(pretest);
+					for (String question : ratedQList)
+					{
+						if (method.isInGroup(Method.Group.STATIC))
+						{
+							condensedSysRankMap = getCondensedList(question,pretest, method, null);
+							IdealRankMap = getIdealRanking(condensedSysRankMap);
+							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
+							AP = getAP(condensedSysRankMap,totalRelevantExample);
+							nDCG = getNDCG(condensedSysRankMap, IdealRankMap);
+							QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap, totalRelevantExample);
+							db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure);
+						}
+						else if (method.isInGroup(Method.Group.PERSONALZIED))
+						{
+							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
+							for (Map<String,Double> kmap : conceptLevelMap)
+							{
+								condensedSysRankMap = getCondensedList(question,pretest,method,kmap);
+								IdealRankMap = getIdealRanking(condensedSysRankMap);
+								totalRelevantExample = db.getRelevantExampleList(pretest,question).size();
+								AP = getAP(condensedSysRankMap,totalRelevantExample);
+								nDCG = getNDCG(condensedSysRankMap,IdealRankMap);
+								QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap,totalRelevantExample);
+								db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure);						
+							}
+						}
+					}
+										
+				}
+			}			
 		}
 		else
 		{
@@ -26,275 +66,164 @@ public class EvaluationSim {
 		db.close();
 
 	}
-
-	private static void calculatePersonalizedSim() {
-//		//calculate pglobal similarity 				
-//		sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
-//		db.insertContentSim(q, e, sim, "PGLOBAL:AS");
-//		sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
-//		db.insertContentSim(q, e, sim, "PGLOBAL:COS");
-//		//calculate plocal similarity
-//		sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
-//		db.insertContentSim(q, e, sim, "PLOCAL:AS");
-//		sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
-//		db.insertContentSim(q, e, sim, "PLOCAL:COS");
-		
-	}
-
-	private static void calculatePersonalizedSim(String[] qList, String[] eList) {
-		List<String> qConcepts = null;
-		List<String> eConcepts = null;
-		Map<String,Double> qConceptWeight = null;
-		Map<String,Double> eConceptWeight = null;
-		List<ArrayList<String>> qtree = null;
-		List<ArrayList<String>> etree = null;
-		double sim = 0.0;		
-		for (String q : qList)
-		{
-			//creating list of concepts in question
-			qConcepts = db.getConcepts(q);
-			//TFIDF values used as weight of concepts in question
-			qConceptWeight = db.getTFIDF(q);
-			//subtrees in question
-			qtree = getSubtrees(q);
-			for (String e : eList) {
-				//creating list of concepts in example
-				eConcepts = db.getConcepts(e);
-				//TFIDF values used as weight of concepts in example
-				eConceptWeight = db.getTFIDF(e);
-				//subtrees in example
-				etree = getSubtrees(e);
-				//calculate global similarity 				
-				sim = simAssociationCoefficient(qConcepts,eConcepts,true); //variant 1: global tree - count concept
-				db.insertContentSim(q, e, sim, "PGLOBAL:AS");
-				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,true); //variant 2: global tree - weight concept
-				db.insertContentSim(q, e, sim, "PGLOBAL:COS");
-				//calculate local similarity
-				sim = localSim(null,qtree,etree,"AS",null,null,true); //variant 1: local subtree - count concept
-				db.insertContentSim(q, e, sim, "PLOCAL:AS");
-				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,true); //variant 2: local subtree - weight concept
-				db.insertContentSim(q, e, sim, "PLOCAL:COS");
-			}
-		}		
-	}
 	
-	private static List<ArrayList<String>> getSubtrees(String content) {
-		List<ArrayList<String>> subtreeList = new ArrayList<ArrayList<String>>();
-		List<Integer> lines = db.getStartEndLine(content);
-		int start = lines.get(0);
-		int end = lines.get(1);
-		ArrayList<String> subtree = null;
-		List<String> adjucentConceptsList = null;
-		for (int line = start; line <= end; line++)
+	private static double getQMeasure(
+			Map<Integer, Map<String, Double>> condensedSysRankMap,
+			Map<Integer, Map<String, Double>> idealRankMap, int totalRelevantExample) {
+		double BR = 0;
+		Map<Integer, Map<String, Double>> cSub, ISub;		
+		for (int rank : condensedSysRankMap.keySet())
 		{
-			//create subtree for concepts that are in the current line
-			subtree = db.getConceptsInSameLine(content, line);
-			if (updateSubtreeList(subtree,subtreeList) == true)
-				subtreeList.add(subtree);	
-			List<Integer> endLines = db.getEndLineBlock(content,line);			
-			for (int e : endLines)
+			if (isRelevant(rank,condensedSysRankMap) == false)
+				BR += 0;
+			else
 			{
-				//create subtree for the block
-				subtree = new ArrayList<String>();
-				adjucentConceptsList = db.getAdjacentConcept(content,line,e);
-				Collections.sort(adjucentConceptsList, new SortByName());
-				for (String adjcon : adjucentConceptsList)
-					subtree.add(adjcon);				
-				if (updateSubtreeList(subtree,subtreeList) == true)
-					subtreeList.add(subtree);	
-			}			
-		}	
-		return subtreeList;
-	}	
-
-	private static boolean updateSubtreeList(ArrayList<String> subtree, List<ArrayList<String>> subtreeList) {
-		if (subtree.isEmpty() == false && subtreeList.contains(subtree) == false)
-			return true;
-		return false;		
-	}
-
-	/*
-	 * Return value ranges from -1 to 1. 
-	 */
-	private static double localSim(String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
-			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, boolean isPersonalized)
-	{
-		double [][] s = new double[qtree.size()][etree.size()]; 
-		int [][] alpha = new int[qtree.size()][etree.size()];	
-		//initialize all elements of alpha to be 1
-		for (int i = 0; i < qtree.size(); i++)
-			for(int j = 0; j < etree.size(); j++)
-				alpha[i][j] = 1;
-				
-		//fill s
-		for (int i = 0; i < qtree.size(); i++)
-			for(int j = 0; j < etree.size(); j++)
-			{
-				if (variant.equals("AS"))
-				{
-					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j),isPersonalized);
-				}
-				else if (variant.equals("COS"))
-				{
-					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,isPersonalized);
-				}
-			}
-		//print(s);//print s[i][j]
-		//fill alpha
-		for (int i = 0; i < qtree.size(); i++)
-			for(int j = 0; j < etree.size(); j++)
-			{
-				if (alpha[i][j] != 0)
-				{
-					//set alpha 1 for this element
-					alpha[i][j] = 1;
-					//if s[i][j] is one, set alpha of other elements in the same row and column to 0. 
-					if (s[i][j] == 1)
-					{
-						//set alpha 0 for other elements in the same row
-						for (int e = 0; e < etree.size(); e++)
-						{
-							if (e!=j)
-								alpha[i][e] = 0;
-						}
-						//set alpha 0 for other elements in the same column
-						for (int q = 0; q < qtree.size(); q++)
-						{
-							if (q!=i)
-								alpha[q][j] = 0;
-						}
-					}								
-				}				
-			}
-		//print(alpha);//print alpha[i][j]
-		double sim = 0.0;
-		for (int i = 0; i < qtree.size(); i++)
-			for(int j = 0; j < etree.size(); j++)
-			{
-				sim += (alpha[i][j]*s[i][j]);
-			}
-		
-		/*
-		 * divide the sim by sum of weights to calculate weighted average
-		 * sumOfWeights = qtree.size()*etree.size() when no alpha is 0
-		 */
-		double sumOfWeights = 0.0;
-		for (int i = 0; i < qtree.size(); i++)
-			for(int j = 0; j < etree.size(); j++)			
-				sumOfWeights += alpha[i][j];
-			
-		sim = sim / sumOfWeights;
-		//release space
-		s = null;
-		alpha = null;
-		return sim;
-	}
-
-	private static void print(int[][] alpha) {
-		for (int i = 0; i < alpha.length; i++)
-		{
-			for(int j = 0; j < alpha[0].length; j++)
-				System.out.print(String.format("%s ", alpha[i][j]));
-			System.out.println();
-		}			
-	}
-
-	private static void print(double[][] s) {
-		for (int i = 0; i < s.length; i++)
-		{
-			for(int j = 0; j < s[0].length; j++)
-				System.out.print(String.format("%.2f ", s[i][j]));
-			System.out.println();
-		}		
-	}
-
-	/* 
-	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
-	 */
-	private static double simCosine(String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, boolean isPersonalized) {
-		//create concept space by union of two sets. Set drops repeated elements and contains unique values
-		Set<String> qConceptSet = new HashSet<String>(qConcepts);
-		Set<String> eConceptSet = new HashSet<String>(eConcepts);
-		List<String> conceptSpace = new ArrayList<String>(union(qConceptSet, eConceptSet));
-		HashMap<String,Double> evector = new HashMap<String,Double>();// concept vector for example
-		HashMap<String,Double> qvector = new HashMap<String,Double>(); // concept vector for question
-		if (isPersonalized == false)
-		{
-			for (String c : conceptSpace)
-			{
-				evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
-				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);			
+				cSub = getSubMap(condensedSysRankMap,rank);
+				ISub = getSubMap(idealRankMap,rank);
+				BR = BR + (double)(cg(cSub)+ getCountRelevantExamples(rank,cSub))/(double)(cg(ISub)+rank);
 			}
 		}
+		double QMeasure = BR/totalRelevantExample;
+		return QMeasure;
+	}
+
+	//(test
+	public static int cg(Map<Integer, Map<String, Double>> subMap) {
+	    int cg = 0;
+		for (int i : subMap.keySet())
+			cg += (Double) subMap.get(i).values().toArray()[0];
+		return cg;
+	}
+
+	public static Map<Integer, Map<String, Double>> getSubMap(
+			Map<Integer, Map<String, Double>> map, int rank) {
+		Map<Integer, Map<String, Double>> subMap = new HashMap<Integer, Map<String, Double>>();
+		for (int i : map.keySet())
+		{
+			if (i <= rank)
+				subMap.put(i, map.get(i));			
+			else
+				break;
+		}
+		return subMap;
+	}
+
+	private static double getNDCG(
+			Map<Integer, Map<String, Double>> condensedSysRankMap,
+			Map<Integer, Map<String, Double>> idealRankMap) {
+		double dg = 0, dgI = 0, gain = 0, gainI = 0;
+		for (int rank : condensedSysRankMap.keySet())
+		{
+			gain = (Double) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			gainI = (Double) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			dg += dg(rank,gain);
+			dgI += dg(rank,gainI);
+		}
+		double nDCG = dg/dgI;
+		return nDCG;
+	}
+
+	private static double dg(int rank, double gain) {
+		double dg = 0.0;
+		if (rank <= api.Constants.nDCG_LOG_BASE)
+			dg = gain;
 		else 
 		{
-			//TODO implement the personalized
+			double log2 = Math.log10(gain)/Math.log10(2);
+			dg = gain/log2;
 		}
+		return dg;
+	}
+
+	private static double getAP(Map<Integer, Map<String, Double>> condensedSysRankMap,int totalRelevantExamples) {
+		double sum = 0;
+		for (int rank : condensedSysRankMap.keySet())
+		{
+			if (isRelevant(rank,condensedSysRankMap) == false)
+				sum += 0;
+			else
+				sum = sum + (double)getCountRelevantExamples(rank,condensedSysRankMap)/(double)rank;
+		}
+		double AP = sum/totalRelevantExamples;
+		return AP;
+	}
+
+	private static boolean isRelevant(double rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
+		double rate = (Double) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+		return (rate > 0);
+	}
+
+	private static int getCountRelevantExamples(int rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
+		int count = 0;
+		for (int i : condensedSysRankMap.keySet())
+		{
+			if (i <= rank)
+			{
+				if (isRelevant(rank,condensedSysRankMap) == true)
+					count++;
+			}
+			else
+				break;
+		}
+		return count;
+	}
+
+	private static Map<Integer, Map<String, Double>> getIdealRanking(Map<Integer, Map<String, Double>> condensedSysRankMap) {
+		Map<String,Double> tmp = new HashMap<String,Double>();
+		ValueComparator vc = new ValueComparator(tmp);
+		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);
+		tmp.putAll((Map<String, Double>)condensedSysRankMap.values());
+		sortedTreeMap.putAll(tmp);
+		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
+		int irank = 0;
+		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
+		{
+			irank++;
+			Map<String,Double> ratingMap = new HashMap<String,Double>();
+			ratingMap.put(entry.getKey(), entry.getValue());
+			sortedRankMap.put(irank,ratingMap);
+		}
+		return sortedRankMap;
+	}
+
+	private static Map<Integer, Map<String, Double>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
+		Map<String,Double> tmp = new HashMap<String,Double>();
+		ValueComparator vc = new ValueComparator(tmp);
+		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);
+		tmp.putAll(ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap));
+		sortedTreeMap.putAll(tmp);
+		int rank = 0;
+		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
+		String example;
 		
-		double numerator = 0.0;
-		double eDemoninator = 0.0;
-		double qDenominator = 0.0;
-		for (String c :  conceptSpace)
+		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
 		{
-			numerator += qvector.get(c) * evector.get(c);
-			eDemoninator += Math.pow(evector.get(c), 2); //each element in the example vector is raised to the power of 2 
-			qDenominator += Math.pow(qvector.get(c), 2); //each element in the example vector is raised to the power of 2 
+			example = entry.getKey();
+			if (db.isJudged(question,example,pretest) == true)
+			{
+				rank ++;
+				Map<String,Double> ratingMap = new HashMap<String,Double>();
+				ratingMap.put(example, db.getAvgRate(question, example, pretest));
+				sortedRankMap.put(rank, ratingMap);
+			}			
 		}
-		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
-		return sim;	
+		return sortedRankMap;
 	}
 
-	/*
-	 * Return value ranges from -1 to 1.
-	 */
-	public static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts, boolean isPersonalized){
-		Set<String> qConceptSet = new HashSet<String>(qConcepts);
-		Set<String> eConceptSet = new HashSet<String>(eConcepts);
-		double a = 0.0,b = 0.0;
-		if (isPersonalized == false)
-		{
-			a = intersection(qConceptSet, eConceptSet).size();
-			b = symDifference(qConceptSet, eConceptSet).size();
-		}
-		else
-		{
-			//TODO impelement the personalzied version
-		}
-		double sim = (2*a-b)/(2*a+b);
-		return sim;
-	}	
+	private static class ValueComparator implements Comparator<String> {
 
-	public static <T> Set<T> union(Set<T> setA, Set<T> setB) {
-		Set<T> tmp = new TreeSet<T>(setA);
-		tmp.addAll(setB);
-		return tmp;
-	}
-
-	public static <T> Set<T> intersection(Set<T> setA, Set<T> setB) {
-		Set<T> tmp = new TreeSet<T>();
-		for (T x : setA)
-			if (setB.contains(x))
-				tmp.add(x);
-		return tmp;
-	}
-
-	public static <T> Set<T> difference(Set<T> setA, Set<T> setB) {
-		Set<T> tmp = new TreeSet<T>(setA);
-		tmp.removeAll(setB);
-		return tmp;
-	}
-
-	public static <T> Set<T> symDifference(Set<T> setA, Set<T> setB) {
-		Set<T> tmpA;
-		Set<T> tmpB;
-		tmpA = union(setA, setB);
-		tmpB = intersection(setA, setB);
-		return difference(tmpA, tmpB);
-	}
-	
-	public static class SortByName implements Comparator<String> {
-	    public int compare(String s1, String s2) {
-	        return s1.compareTo(s2);
+	    Map<String, Double> base;
+	    public ValueComparator(Map<String, Double> base) {
+	        this.base = base;
 	    }
+
+	    // Note: this comparator sorts the values descendingly, so that the best activity is in the first element.
+	    public int compare(String a, String b) {
+	    	if (base.get(a) >= base.get(b)) {
+	            return -1;
+	        } else {
+	            return 1;
+	        } // 
+	    } // returning 0 would merge keys	   
 	}
 }
