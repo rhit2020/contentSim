@@ -54,8 +54,7 @@ public class EvaluationSim {
 								db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure);						
 							}
 						}
-					}
-										
+					}										
 				}
 			}			
 		}
@@ -64,7 +63,6 @@ public class EvaluationSim {
 			System.out.println("System is not ready!");
 		}
 		db.close();
-
 	}
 	
 	private static double getQMeasure(

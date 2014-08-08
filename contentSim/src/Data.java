@@ -74,7 +74,7 @@ public class Data {
 		readStartEndlineData(path+"content_start_end.csv");
 		readBlockEndLine(path+"block_end_line.csv");
 		readAdjacentConcept(path+"adjacent_concept.csv");
-		readDifficulty(path+"difficutly.csv"); //content,difficulty
+		readDifficulty(path+"difficulty.csv"); //content,difficulty
 		readTopic(path+"topic.csv");//content, topic
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
 		createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
@@ -145,14 +145,15 @@ public class Data {
 			}
 		}
 		int count = 0;
-		for (String group : gud.keySet())
-			for (String user : gud.get(group).keySet())
-				count += gud.get(group).get(user).size();
+		for (Map<String, List<String>> group : gud.values())
+			for ( List<String> dl : group.values())
+				count += dl.size();
 		System.out.println("gud:"+count);
 		//write the user knowledge for each group,user,datentime to the output file
 		List<String> dList;
 		Map<String, Double> conceptLeveles;
 		count = 0;
+		int count2 = 0;
 		//write to the file	
 		try {
 			for (String group : gud.keySet())
@@ -162,6 +163,7 @@ public class Data {
 					for (String datentime : dList)
 					{
 						conceptLeveles = getConceptLevels(user,"java",group,datentime);
+						count2 += 1;
 						for (String concept : conceptLeveles.keySet())
 						{
 								bwConceptLevels.write(group+","+user+","+datentime+","+concept+","+conceptLeveles.get(concept));
@@ -174,6 +176,7 @@ public class Data {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		System.out.println("size of group-user-datentime:"+count2);
 		System.out.println("total line in outputConceptLevels:"+count);
 		//destroy the local map
 		for (Map<String,List<String>> map : gud.values())
@@ -820,7 +823,7 @@ public class Data {
 				{
 					list = new ArrayList<String>();
 					list.add(name);
-					contentMap.put(type, list);
+					contentMap.put(type,list);
 				}
 			}
 		} catch (FileNotFoundException e) {
@@ -836,7 +839,10 @@ public class Data {
 				}
 			}
 		}
-		System.out.println("contentMap:"+contentMap.values().size());
+		int count = 0;
+		for (List<String> l : contentMap.values())
+			count += l.size();
+		System.out.println("contentMap:"+count);
 	}
 
 	public void close() {

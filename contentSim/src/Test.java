@@ -5,10 +5,14 @@ import junit.framework.TestCase;
 
 
 public class Test extends TestCase{
-
-	protected void setUp(){};
-	protected void tearDown(){};
-	public void testdg(){
+	private EvaluationSim es;
+	protected void setUp(){
+		EvaluationSim es = new EvaluationSim();
+	};
+	protected void tearDown(){
+		es = null;
+	};
+	public void testcg(){
 		Map<Integer, Map<String, Double>> map = new HashMap<Integer,Map<String,Double>>();
 		Map<String, Double> ratingMap1 = new HashMap<String,Double>();
 		ratingMap1.put("a", 2.0);
@@ -22,4 +26,8 @@ public class Test extends TestCase{
 		EvaluationSim es = new EvaluationSim();
 		assertEquals(es.cg(map),3);
 	};
+	
+	public void testdg(){
+		
+	}
 }
