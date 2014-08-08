@@ -1157,14 +1157,14 @@ public class Data {
                 url = new URL(api.Constants.conceptLevelsServiceURL
                         + "?typ=con&dir=out&frm=xml&app=25&dom=java_ontology"
                         + "&usr=" + URLEncoder.encode(usr, "UTF-8") + "&grp="
-                        + URLEncoder.encode(grp, "UTF-8"));
+                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + datentime);
 
             }
             if (domain.equalsIgnoreCase("sql")) {
                 url = new URL(api.Constants.conceptLevelsServiceURL
                         + "?typ=con&dir=out&frm=xml&app=23&dom=sql_ontology"
                         + "&usr=" + URLEncoder.encode(usr, "UTF-8") + "&grp="
-                        + URLEncoder.encode(grp, "UTF-8"));
+                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + datentime);
 
             }
             if (url != null)
