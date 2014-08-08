@@ -11,7 +11,7 @@ public class EvaluationSim {
 	private static Data db;
 	
 	public static void main(String[] args){
-		db = new Data();
+		db = Data.getInstance();
 		if (db.isReady())
         {	
 			db.setup();
@@ -187,7 +187,7 @@ public class EvaluationSim {
 	private static Map<Integer, Map<String, Double>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
 		Map<String,Double> tmp = new HashMap<String,Double>();
 		ValueComparator vc = new ValueComparator(tmp);
-		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);
+		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
 		tmp.putAll(ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap));
 		sortedTreeMap.putAll(tmp);
 		int rank = 0;

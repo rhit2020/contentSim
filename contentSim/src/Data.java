@@ -40,6 +40,20 @@ public class Data {
 	private Map<String,Map<String,Map<String,Map<String,Double>>>> conceptLevelMap; //Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
 	private Map<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>> ratingMap;//Map<pretest_level,Map<question,Map<Map<concept,knowledge>,Map<example,List<rating>>>>>
 	
+	private static Data data = null;
+	
+	private Data() {
+		// Exists only to defeat instantiation.
+		//it can only be accessed in the class
+    }
+	
+	public static Data getInstance() {
+		if(data == null) {
+			data = new Data();
+	    }
+		return data;
+	}
+	
 	public void setup() {
 		String path = "./resources/";
 		fileSim = new File(path+"outputSim.txt");
@@ -202,6 +216,7 @@ public class Data {
 		String line = "";
 		String cvsSplitBy = ",";
 		boolean isHeader = true;
+		int testPut = 0;
 		try {
 			br = new BufferedReader(new FileReader(path));
 			String[] clmn;
@@ -234,6 +249,7 @@ public class Data {
 					groupMap = new HashMap<String,Map<String,Map<String,Double>>>();
 					groupMap.put(user,userMap);
 					conceptLevelMap.put(group, groupMap);
+					testPut++;
 				}
 				else
 				{
@@ -245,6 +261,7 @@ public class Data {
 						userMap = new HashMap<String,Map<String,Double>>();
 						userMap.put(datentime,knowledgeMap);
 						groupMap.put(user,userMap);
+						testPut++;
 					}
 					else{
 						userMap = groupMap.get(user);
@@ -253,11 +270,13 @@ public class Data {
 							knowledgeMap = new HashMap<String,Double>();
 							knowledgeMap.put(concept,knowledge);
 							userMap.put(datentime,knowledgeMap);
+							testPut++;
 						}
 						else
 						{
 							knowledgeMap = userMap.get(datentime);
-							knowledgeMap.put(concept,knowledge);							
+							knowledgeMap.put(concept,knowledge);	
+							testPut++;
 						}
 					}
 				}
@@ -275,11 +294,16 @@ public class Data {
 				}
 			}
 		}
+		System.out.println("testPut:"+testPut);								
 		int count = 0;
+		Map<String, Map<String, Double>> map;
 		for (String group : conceptLevelMap.keySet())
-			for (String user: conceptLevelMap.get(group).keySet())
-				for (String datentime : conceptLevelMap.get(group).get(user).keySet())
-					count += conceptLevelMap.get(group).get(user).get(datentime).keySet().size();
+			for (String user : conceptLevelMap.get(group).keySet())
+			{
+			    map = conceptLevelMap.get(group).get(user);
+				for (String datentime : map.keySet())					
+					count+=map.get(datentime).size();				
+			}
 		System.out.println("conceptLevelMap:"+count);								
 	}
 
@@ -1157,14 +1181,14 @@ public class Data {
                 url = new URL(api.Constants.conceptLevelsServiceURL
                         + "?typ=con&dir=out&frm=xml&app=25&dom=java_ontology"
                         + "&usr=" + URLEncoder.encode(usr, "UTF-8") + "&grp="
-                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + datentime);
+                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + URLEncoder.encode(datentime, "UTF-8"));
 
             }
             if (domain.equalsIgnoreCase("sql")) {
                 url = new URL(api.Constants.conceptLevelsServiceURL
                         + "?typ=con&dir=out&frm=xml&app=23&dom=sql_ontology"
                         + "&usr=" + URLEncoder.encode(usr, "UTF-8") + "&grp="
-                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + datentime);
+                        + URLEncoder.encode(grp, "UTF-8") + "&datentime=" + URLEncoder.encode(datentime, "UTF-8"));
 
             }
             if (url != null)
@@ -1250,13 +1274,31 @@ public class Data {
 	}
 
 	public boolean isJudged(String question, String example, String pretest) {
-		boolean isJudged = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).containsKey(example);
+		boolean isJudged = false;
+		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
+		for (Map<String, List<Integer>> exampleMap : qMap.values())
+			if (exampleMap.containsKey(example))
+			{
+				isJudged = true;
+				break;
+			}
 		return isJudged;
 	}
 	
+	/*
+	 * this method adds all available ratings for that pretest,question,example into a list
+	 * it does not care about the level of the knowledge that provided that rating
+	 * so it can be used in the static evaluation
+	 */
 	public double getAvgRate(String question, String example, String pretest)
 	{
-		List<Integer> rateList = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).get(example);
+		List<Integer> rateList = new ArrayList<Integer>();
+		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
+		for (Map<String, List<Integer>> exampleMap : qMap.values())
+			if (exampleMap.containsKey(example))			
+				rateList.addAll(exampleMap.get(example));
+			
+		//
 		double sum = 0.0;
 		for (int r : rateList)
 			sum += r;
@@ -1264,7 +1306,16 @@ public class Data {
 		return avg;
 	}
 
+	/*
+	 * this method adds all the relevant example for the question to the list
+	  TODO take care about definition of the relevant example,,,do you need to check the ratings???
+	 
 	public Set<String> getRelevantExampleList(String pretest, String question) {
+		ArrayList<String> relList  = new ArrayList<String>();
+		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
+		for (Map<String, List<Integer>> exampleMap : qMap.values())
+			relList.add(exampleMap.)
+				rateList.addAll(exampleMap.get(example));
 		Set<String> relList = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).keySet();
 		return relList;
 	}

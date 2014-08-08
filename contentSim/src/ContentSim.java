@@ -17,7 +17,7 @@ public class ContentSim {
 	public static void main(String[] args){
 		
 		//get level of user knowledge in all concepts
-		db = new Data();
+		db = Data.getInstance();
 //		db  = new DB();
 		// **** for test ****//
 //		String[] qList = {"jArray2"};	
@@ -57,7 +57,9 @@ public class ContentSim {
 		Map<String,Double> eConceptWeight = null;
 		List<ArrayList<String>> qtree = null;
 		List<ArrayList<String>> etree = null;
-		double sim = 0.0;		
+		double sim = 0.0;
+		if (db == null)
+			db = Data.getInstance(); //the singleton instance
 		HashMap<String,Double> rankMap = new HashMap<String,Double>();
 		//creating list of concepts in question
 		qConcepts = db.getConcepts(q);
