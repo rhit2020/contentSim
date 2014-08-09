@@ -56,4 +56,10 @@ public class Constants {
 //	}
 
 	public static final int nDCG_LOG_BASE = 2;
+	public static final double RELEVANEC_THRESHOLD = +1;
+	
+	public static final int NOT_HELPFUL_AT_ALL_GAIN = 0;
+	public static final int NOT_HELPFUL_GAIN = 0;
+	public static final int HELPFUL_GAIN = 1;
+	public static final int VERY_HELPFUL_GAIN = 2;
 }

@@ -68,24 +68,28 @@ public class EvaluationSim {
 	private static double getQMeasure(
 			Map<Integer, Map<String, Double>> condensedSysRankMap,
 			Map<Integer, Map<String, Double>> idealRankMap, int totalRelevantExample) {
-		double BR = 0;
-		Map<Integer, Map<String, Double>> cSub, ISub;		
-		for (int rank : condensedSysRankMap.keySet())
-		{
-			if (isRelevant(rank,condensedSysRankMap) == false)
-				BR += 0;
-			else
+		double BR = 0,QMeasure;
+		if (totalRelevantExample == 0)
+			QMeasure = 0;
+		else{
+			Map<Integer, Map<String, Double>> cSub, ISub;		
+			for (int rank : condensedSysRankMap.keySet())
 			{
-				cSub = getSubMap(condensedSysRankMap,rank);
-				ISub = getSubMap(idealRankMap,rank);
-				BR = BR + (double)(cg(cSub)+ getCountRelevantExamples(rank,cSub))/(double)(cg(ISub)+rank);
+				if (isRelevant(rank,condensedSysRankMap) == false)
+					BR += 0;
+				else
+				{
+					cSub = getSubMap(condensedSysRankMap,rank);
+					ISub = getSubMap(idealRankMap,rank);
+					BR = BR + (double)(cg(cSub)+ getCountRelevantExamples(rank,cSub))/(double)(cg(ISub)+rank);
+				}
 			}
-		}
-		double QMeasure = BR/totalRelevantExample;
+			QMeasure = BR/totalRelevantExample;
+		}		
 		return QMeasure;
 	}
 
-	//(test
+	//test
 	public static int cg(Map<Integer, Map<String, Double>> subMap) {
 	    int cg = 0;
 		for (int i : subMap.keySet())
@@ -109,7 +113,7 @@ public class EvaluationSim {
 	private static double getNDCG(
 			Map<Integer, Map<String, Double>> condensedSysRankMap,
 			Map<Integer, Map<String, Double>> idealRankMap) {
-		double dg = 0, dgI = 0, gain = 0, gainI = 0;
+		double dg = 0, dgI = 0, gain = 0, gainI = 0,nDCG;
 		for (int rank : condensedSysRankMap.keySet())
 		{
 			gain = (Double) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
@@ -117,7 +121,10 @@ public class EvaluationSim {
 			dg += dg(rank,gain);
 			dgI += dg(rank,gainI);
 		}
-		double nDCG = dg/dgI;
+		if (dg == 0.0 && dgI == 0.0) //all docs are not helpful
+			nDCG = 0;
+		else
+			nDCG = dg/dgI;
 		return nDCG;
 	}
 
@@ -127,7 +134,7 @@ public class EvaluationSim {
 			dg = gain;
 		else 
 		{
-			double log2 = Math.log10(gain)/Math.log10(2);
+			double log2 = Math.log10(rank)/Math.log10(2);
 			dg = gain/log2;
 		}
 		return dg;
@@ -135,20 +142,33 @@ public class EvaluationSim {
 
 	private static double getAP(Map<Integer, Map<String, Double>> condensedSysRankMap,int totalRelevantExamples) {
 		double sum = 0;
-		for (int rank : condensedSysRankMap.keySet())
+		double AP;
+		if (totalRelevantExamples != 0)
 		{
-			if (isRelevant(rank,condensedSysRankMap) == false)
-				sum += 0;
-			else
-				sum = sum + (double)getCountRelevantExamples(rank,condensedSysRankMap)/(double)rank;
+			for (int rank : condensedSysRankMap.keySet())
+			{
+				if (isRelevant(rank,condensedSysRankMap) == false)
+					sum += 0;
+				else
+					sum = sum + (double)getCountRelevantExamples(rank,condensedSysRankMap)/(double)rank;
+			}
+			AP = sum/totalRelevantExamples;		
 		}
-		double AP = sum/totalRelevantExamples;
+		else
+			AP = 0;
+		
 		return AP;
 	}
 
-	private static boolean isRelevant(double rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
-		double rate = (Double) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
-		return (rate > 0);
+	private static boolean isRelevant(int rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
+		Map<String, Double> rMap = condensedSysRankMap.get(rank);
+		//rMap has only one <key,value>
+		for (Double rate : rMap.values())
+		{
+			if (rate >= api.Constants.RELEVANEC_THRESHOLD)
+				return true;
+		}
+		return false;
 	}
 
 	private static int getCountRelevantExamples(int rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
@@ -160,17 +180,22 @@ public class EvaluationSim {
 				if (isRelevant(rank,condensedSysRankMap) == true)
 					count++;
 			}
-			else
-				break;
+			//note: since map is not sorted, you have to iterate all the keys in the map
 		}
 		return count;
 	}
-
+	
+	/*
+	 * idealList is a map with key:rank and value:map<key:example;value:AvgRate>. 
+	 * Example,AvgRating pairs are sorted descendingly with the example with highest ratings at the top.
+	 * rankings are then determined based on the sorted example,rating pairs. 
+	 */
 	private static Map<Integer, Map<String, Double>> getIdealRanking(Map<Integer, Map<String, Double>> condensedSysRankMap) {
 		Map<String,Double> tmp = new HashMap<String,Double>();
 		ValueComparator vc = new ValueComparator(tmp);
 		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);
-		tmp.putAll((Map<String, Double>)condensedSysRankMap.values());
+		for (Map<String,Double> rMap : condensedSysRankMap.values())
+			tmp.putAll(rMap);
 		sortedTreeMap.putAll(tmp);
 		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
 		int irank = 0;
@@ -184,6 +209,9 @@ public class EvaluationSim {
 		return sortedRankMap;
 	}
 
+	/*
+	 * condensedlist is a map with key:rank and value:map<key:example;value:AvgRate>
+	 */
 	private static Map<Integer, Map<String, Double>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
 		Map<String,Double> tmp = new HashMap<String,Double>();
 		ValueComparator vc = new ValueComparator(tmp);
@@ -192,8 +220,7 @@ public class EvaluationSim {
 		sortedTreeMap.putAll(tmp);
 		int rank = 0;
 		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
-		String example;
-		
+		String example;		
 		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
 		{
 			example = entry.getKey();
@@ -201,7 +228,7 @@ public class EvaluationSim {
 			{
 				rank ++;
 				Map<String,Double> ratingMap = new HashMap<String,Double>();
-				ratingMap.put(example, db.getAvgRate(question, example, pretest));
+				ratingMap.put(example,db.getAvgRate(question, example, pretest));
 				sortedRankMap.put(rank, ratingMap);
 			}			
 		}

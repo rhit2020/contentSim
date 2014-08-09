@@ -1,3 +1,4 @@
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,9 +26,12 @@ public class Test extends TestCase{
 		map.put(3, ratingMap3);
 		EvaluationSim es = new EvaluationSim();
 		assertEquals(es.cg(map),3);
-	};
-	
-	public void testdg(){
-		
+	};	
+	public void testFormat(){
+		DecimalFormat df = new DecimalFormat();
+		df.setMaximumFractionDigits(2);
+		System.out.println("3.445--->"+df.format(3.445));
+		System.out.println("3.444--->"+df.format(3.444));
+		System.out.println("3.446--->"+df.format(3.446));
 	}
 }

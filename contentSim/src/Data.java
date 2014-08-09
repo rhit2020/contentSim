@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,7 +33,8 @@ public class Data {
 	private Map<String,Map<Integer,Map<Integer,List<String>>>> adjacentConceptMap = null; //keys are contents, values: a map with key:start line and a map as value(key:end line, value, List of concepts in that start and end line)
 	private File fileSim,fileConceptLevels,fileMeasures; //output file where similarity results are stored
 	private FileWriter fwSim,fwConceptLevels,fwMeasures;
-	BufferedWriter bwSim,bwConceptLevels,bwMeasures;	
+	private BufferedWriter bwSim,bwConceptLevels,bwMeasures;	
+	private DecimalFormat df;	
     //maps for using in the evaluation process
 	private Map<String,String> difficultyMap; //content_name,difficulty
 	private Map<String,List<String>> topicMap; //there is one content currently that has two topics.
@@ -55,7 +57,10 @@ public class Data {
 	}
 	
 	public void setup() {
-		String path = "./resources/";
+		df = new DecimalFormat();
+		df.setMaximumFractionDigits(2);
+		
+		String path = "./resources/";		
 		fileSim = new File(path+"outputSim.txt");
 		try {
 			if (!fileSim.exists())
@@ -74,15 +79,15 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
-		fileConceptLevels = new File(path+"outputConceptLevels.csv");
-		try {
-			if (!fileConceptLevels.exists())
-				fileConceptLevels.createNewFile();
-			fwConceptLevels = new FileWriter(fileConceptLevels.getAbsoluteFile());
-			bwConceptLevels = new BufferedWriter(fwConceptLevels);
-		} catch (IOException e) {
-				e.printStackTrace();
-		}		
+//		fileConceptLevels = new File(path+"outputConceptLevels.csv");
+//		try {
+//			if (!fileConceptLevels.exists())
+//				fileConceptLevels.createNewFile();
+//			fwConceptLevels = new FileWriter(fileConceptLevels.getAbsoluteFile());
+//			bwConceptLevels = new BufferedWriter(fwConceptLevels);
+//		} catch (IOException e) {
+//				e.printStackTrace();
+//		}		
 		readContentData(path+"content.csv");
 		readConceptData(path+"content_concept.csv");
 		readStartEndlineData(path+"content_start_end.csv");
@@ -91,7 +96,7 @@ public class Data {
 		readDifficulty(path+"difficulty.csv"); //content,difficulty
 		readTopic(path+"topic.csv");//content, topic
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
-		createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
+//    	createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
 		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
 		readRatings(path+"ratings.csv");//user,group,datentime,question,example,rating (0,1,2,3)
 	}
@@ -215,8 +220,7 @@ public class Data {
 		BufferedReader br = null;
 		String line = "";
 		String cvsSplitBy = ",";
-		boolean isHeader = true;
-		int testPut = 0;
+		boolean isHeader = false; //the file has no header @see createConceptLevelFile
 		try {
 			br = new BufferedReader(new FileReader(path));
 			String[] clmn;
@@ -249,7 +253,6 @@ public class Data {
 					groupMap = new HashMap<String,Map<String,Map<String,Double>>>();
 					groupMap.put(user,userMap);
 					conceptLevelMap.put(group, groupMap);
-					testPut++;
 				}
 				else
 				{
@@ -261,7 +264,6 @@ public class Data {
 						userMap = new HashMap<String,Map<String,Double>>();
 						userMap.put(datentime,knowledgeMap);
 						groupMap.put(user,userMap);
-						testPut++;
 					}
 					else{
 						userMap = groupMap.get(user);
@@ -270,13 +272,11 @@ public class Data {
 							knowledgeMap = new HashMap<String,Double>();
 							knowledgeMap.put(concept,knowledge);
 							userMap.put(datentime,knowledgeMap);
-							testPut++;
 						}
 						else
 						{
 							knowledgeMap = userMap.get(datentime);
 							knowledgeMap.put(concept,knowledge);	
-							testPut++;
 						}
 					}
 				}
@@ -294,7 +294,6 @@ public class Data {
 				}
 			}
 		}
-		System.out.println("testPut:"+testPut);								
 		int count = 0;
 		Map<String, Map<String, Double>> map;
 		for (String group : conceptLevelMap.keySet())
@@ -431,16 +430,16 @@ public class Data {
 		switch (rating)
         {
 		  case 0:
-			  	Nrating = -2; // not helpful at all
+			  	Nrating = api.Constants.NOT_HELPFUL_AT_ALL_GAIN; //not helpful at all
 			  	break;
 		  case 1:
-				Nrating = -1; // not helpful 
+				Nrating = api.Constants.NOT_HELPFUL_GAIN; //not helpful 
 				break;
 		  case 2:
-				Nrating = +1; // helpful 
+				Nrating = api.Constants.HELPFUL_GAIN; //helpful 
 				break;
 		  case 3:
-				Nrating = +2; // very helpful 
+				Nrating = api.Constants.VERY_HELPFUL_GAIN; //very helpful 
 				break;
 		  default: 
 			    break;
@@ -870,6 +869,7 @@ public class Data {
 	}
 
 	public void close() {
+		df = null;
 		try {
 			fileSim = null; // destroy the file for writing the output
 			if (fwSim != null) {
@@ -1166,6 +1166,15 @@ public class Data {
 		return topicMap.get(content);
 	}
 	
+	public String getTopicText(String content){
+		String topics = "";
+		for (String t : topicMap.get(content))
+		{
+			topics += t + " ";
+		}
+		return topics;
+	}
+	
 	public double getPretest(String user)
 	{
 		return pretestMap.get(user);
@@ -1256,15 +1265,17 @@ public class Data {
 
 	public void writeToFile(String question,String pretest,String method, double AP, double nDCG, double QMeasure) {
 		try {
-			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"AP"+"\t"+AP);
+			String topicText = getTopicText(question);
+			String difficulty = getDifficulty(question);
+			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"AP"+"\t"+df.format(AP));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"nDCG"+"\t"+nDCG);
+			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"nDCG"+"\t"+df.format(nDCG));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+"\t"+topicMap.get(question)+"\t"+difficultyMap.get(question)+"\t"+pretest+"\t"+method+"\t"+"QMeasure"+"\t"+QMeasure);
+			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"QMeasure"+"\t"+df.format(QMeasure));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 		} catch (IOException e) {
@@ -1297,8 +1308,6 @@ public class Data {
 		for (Map<String, List<Integer>> exampleMap : qMap.values())
 			if (exampleMap.containsKey(example))			
 				rateList.addAll(exampleMap.get(example));
-			
-		//
 		double sum = 0.0;
 		for (int r : rateList)
 			sum += r;
@@ -1308,15 +1317,18 @@ public class Data {
 
 	/*
 	 * this method adds all the relevant example for the question to the list
-	  TODO take care about definition of the relevant example,,,do you need to check the ratings???
-	 
-	public Set<String> getRelevantExampleList(String pretest, String question) {
-		ArrayList<String> relList  = new ArrayList<String>();
+	 * relevant examples have an AVERAGE gain that is either +1:helpful or is +2:very helpful.
+	 * AVERAGE gain is obtained by summing all the available gains for the example and then dividing them by the total number of the gains.
+	 */	 
+	public List<String> getRelevantExampleList(String pretest, String question) {
 		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
+		List<String> relList = new ArrayList<String>();
 		for (Map<String, List<Integer>> exampleMap : qMap.values())
-			relList.add(exampleMap.)
-				rateList.addAll(exampleMap.get(example));
-		Set<String> relList = ((Map<String,List<Integer>>)(ratingMap.get(pretest).get(question).values())).keySet();
+			for (String example : exampleMap.keySet())
+			{
+				if (getAvgRate(question,example,pretest) >= api.Constants.RELEVANEC_THRESHOLD)
+					relList.add(example);
+			}			
 		return relList;
 	}
 }
