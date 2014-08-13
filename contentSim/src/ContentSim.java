@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -67,6 +68,7 @@ public class ContentSim {
 		qConceptWeight = db.getTFIDF(q);
 		//subtrees in question
 		qtree = getSubtrees(q);
+		List<String> qTopicList = db.getTopic(q); //topic(s) of the question
 		for (String e : eList) {
 			sim = 0.0;
 			//creating list of concepts in example
@@ -80,28 +82,64 @@ public class ContentSim {
 			//static methods
 			case GLOBAL_AS:
 			{
-				sim = simAssociationCoefficient(qConcepts,eConcepts,false,kmap); //variant 1: global tree - count concept	
+				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 
 				break;
 			}
 			case GLOBAL_COS:
 			{
-				sim = simCosine(q,qConcepts,eConcepts,qConceptWeight,eConceptWeight,false,kmap); //variant 2: global tree - weight concept
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null); 
 				break;
 			}
 			case LOCAL_AS:
 			{
-				sim = localSim(null,qtree,etree,"AS",null,null,false,kmap); //variant 1: local subtree - count concept
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null); 
 				break;
 			}
 			case LOCAL_COS:
 			{
-				sim = localSim(q,qtree,etree,"COS",qConceptWeight,eConceptWeight,false,kmap); //variant 2: local subtree - weight concept
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null); 
 				break;
 			}
 			//personalized methods
 			case P_GLOBAL_AS:
 			{
-				sim = simAssociationCoefficient(qConcepts,eConcepts,false,kmap); //variant 1: global tree - count concept	
+				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 	
+				break;
+			}
+			case P_GLOBAL_COS:
+			{
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null); 
+				break;
+			}
+			case P_LOCAL_AS:
+			{
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null); 
+				break;
+			}
+			case P_LOCAL_COS:
+			{
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null); 
+				break;
+			}
+			//personalized with focus on current goal
+			case P_LOCAL_AS_GOAL:
+			{
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,qTopicList); 
+				break;
+			}
+			case P_LOCAL_COS_GOAL:
+			{
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,qTopicList); 
+				break;
+			}
+			case P_GLOBAL_AS_GOAL:
+			{
+				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,qTopicList);
+				break;
+			}
+			case P_GLOBAL_COS_GOAL:
+			{
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,qTopicList); 
 				break;
 			}
 			default:
@@ -150,8 +188,8 @@ public class ContentSim {
 	/*
 	 * Return value ranges from -1 to 1. 
 	 */
-	private static double localSim(String question, List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
-			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, boolean isPersonalized, Map<String, Double> kmap)
+	private static double localSim(List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
+			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList)
 	{
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
@@ -166,11 +204,11 @@ public class ContentSim {
 			{
 				if (variant.equals("AS"))
 				{
-					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j),isPersonalized,kmap);
+					s[i][j] = simAssociationCoefficient(qtree.get(i),etree.get(j),method,kmap,qTopicList);
 				}
 				else if (variant.equals("COS"))
 				{
-					s[i][j] = simCosine(question,qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,isPersonalized,kmap);
+					s[i][j] = simCosine(qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,method,kmap,qTopicList);
 				}
 			}
 		//print(s);//print s[i][j]
@@ -245,24 +283,38 @@ public class ContentSim {
 	/* 
 	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
 	 */
-	private static double simCosine(String q, List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, boolean isPersonalized, Map<String, Double> kmap) {
+	private static double simCosine(List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList) {
 		//create concept space by union of two sets. Set drops repeated elements and contains unique values
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
 		List<String> conceptSpace = new ArrayList<String>(union(qConceptSet, eConceptSet));
 		HashMap<String,Double> evector = new HashMap<String,Double>();// concept vector for example
 		HashMap<String,Double> qvector = new HashMap<String,Double>(); // concept vector for question
+		Set<String> qTopicSet = (qTopicList!=null?new HashSet<String>(qTopicList):null);
+		Set<String> conceptTopicSet;
+		boolean isTargetConcept;
 		for (String c : conceptSpace)
 		{
-			if (isPersonalized == false)
+			if (method.isInGroup(api.Constants.Method.Group.STATIC) == true)
 			{
 				evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
 				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);	
 			}
 			else
 			{
-				evector.put(c, eConceptSet.contains(c)?1-kmap.get(c):0);
-				qvector.put(c, qConceptSet.contains(c)?1-kmap.get(c):0);	
+				if (Arrays.asList(api.Constants.GOAL_BASED_METHODS).contains(method) == true)
+				{
+					//if the concept is in the target concepts of the topic weight of concept is non-zero, otherwise it is 0.
+					conceptTopicSet = new HashSet<String>(db.getConceptTopic(c));
+					isTargetConcept = (intersection(conceptTopicSet,qTopicSet).size()>0);
+					evector.put(c, isTargetConcept & eConceptSet.contains(c)?1-kmap.get(c):0);
+					qvector.put(c, isTargetConcept & qConceptSet.contains(c)?1-kmap.get(c):0);
+				}
+				else
+				{
+					evector.put(c, eConceptSet.contains(c)?1-kmap.get(c):0);
+					qvector.put(c, qConceptSet.contains(c)?1-kmap.get(c):0);
+				}	
 			}				
 		}
 		double numerator = 0.0;
@@ -281,11 +333,11 @@ public class ContentSim {
 	/*
 	 * Return value ranges from -1 to 1.
 	 */
-	private static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts, boolean isPersonalized, Map<String, Double> kmap){
+	private static double simAssociationCoefficient(List<String> qConcepts, List<String> eConcepts, Method method, Map<String, Double> kmap, List<String> qTopicList){
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
 		double a = 0.0,b = 0.0;
-		if (isPersonalized == false)
+		if (method.isInGroup(api.Constants.Method.Group.STATIC) == true)
 		{
 			a = intersection(qConceptSet, eConceptSet).size();
 			b = symDifference(qConceptSet, eConceptSet).size();
@@ -294,10 +346,40 @@ public class ContentSim {
 		{
 			Set<String> intersectionSet = intersection(qConceptSet, eConceptSet);
 			Set<String> symDifferenceSet = intersection(qConceptSet, eConceptSet);
-			for (String concept : intersectionSet)
-				a += (1-kmap.get(concept));
-			for (String concept : symDifferenceSet)
-				b += (1-kmap.get(concept));
+			Set<String> qTopicSet = (qTopicList!=null?new HashSet<String>(qTopicList):null);
+
+			if (Arrays.asList(api.Constants.GOAL_BASED_METHODS).contains(method) == true)
+			{
+				//step 1: create the 'a' set:concepts in intersection that are also target concept for the topic
+				Set<String> intersectionTargetset = new HashSet<String>();
+				Set<String> conceptTopicSet;
+				for (String concept : intersectionSet)
+				{
+					conceptTopicSet = new HashSet<String>(db.getConceptTopic(concept));
+					if (intersection(qTopicSet,conceptTopicSet).size() > 0)
+						intersectionTargetset.add(concept);
+				}
+				//step 2: calculate concepts in intersectionSet that are not target concept for the topic
+				Set<String> notIntersectionTargetSet = symDifference(intersectionSet,intersectionTargetset);
+				//step 3: update b set, adding the concepts in step2 to the set that contains concepts that are not in common 
+				symDifferenceSet = union(symDifferenceSet,notIntersectionTargetSet);
+				for (String concept : intersectionTargetset)
+					a += (1-kmap.get(concept));
+				for (String concept : symDifferenceSet)
+					b += (1-kmap.get(concept));
+					
+			}
+			else
+			{
+				for (String concept : intersectionSet)
+				{
+					System.out.println("concept:"+concept+"  "+kmap.get(concept));
+					a += (1-kmap.get(concept));
+				}
+				for (String concept : symDifferenceSet)
+					b += (1-kmap.get(concept));
+			}
+		
 		}
 		double sim = (2*a-b)/(2*a+b);
 		return sim;

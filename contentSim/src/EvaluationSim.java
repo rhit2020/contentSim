@@ -239,12 +239,10 @@ public class EvaluationSim {
 	}
 
 	private static class ValueComparatorInteger implements Comparator<String> {
-
 	    Map<String, Integer> base;
 	    public ValueComparatorInteger(Map<String, Integer> base) {
 	        this.base = base;
 	    }
-
 	    // Note: this comparator sorts the values descendingly, so that the best activity is in the first element.
 	    public int compare(String a, String b) {
 	    	if (base.get(a) >= base.get(b)) {

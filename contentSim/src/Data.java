@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -37,10 +38,11 @@ public class Data {
 	private DecimalFormat df;	
     //maps for using in the evaluation process
 	private Map<String,String> difficultyMap; //content_name,difficulty
-	private Map<String,List<String>> topicMap; //there is one content currently that has two topics.
+	private Map<String,List<String>> topicQuestionMap; //there is one content currently that has two topics.
 	private Map<String,Double> pretestMap; //userid, pretest
 	private Map<String,Map<String,Map<String,Map<String,Double>>>> conceptLevelMap; //Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
 	private Map<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>> ratingMap;//Map<pretest_level,Map<question,Map<Map<concept,knowledge>,Map<example,List<rating>>>>>
+	private Map<String,List<String>> topicConceptMap;
 	
 	private static Data data = null;
 	
@@ -99,8 +101,67 @@ public class Data {
 //    	createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
 		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
 		readRatings(path+"ratings.csv");//user,group,datentime,question,example,rating (0,1,2,3)
+		readTopicConcept(path+"topicOutcomeConcepts.csv");
 	}
 	
+	private void readTopicConcept(String path) {
+		topicConceptMap = new HashMap<String,List<String>>();
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String topic;
+			String[] conceptList;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				topic = clmn[0];
+				clmn[1] = clmn[1].replace("\"", "");
+				conceptList = clmn[1].split(";");
+				if (topicConceptMap.containsKey(topic) != false)
+				{
+					List<String> list = topicConceptMap.get(topic);
+					for (String c : conceptList)
+						if (list.contains(c) == false)
+							list.add(c);					
+				}
+				else
+				{
+					List<String> list = new ArrayList<String>();
+					for (String c : conceptList)
+						list.add(c);
+					topicConceptMap.put(topic,list);
+				}
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}	
+		int count = 0,countTopic = 0;
+		for (String t : topicConceptMap.keySet())
+		{
+			countTopic++;
+			count += topicConceptMap.get(t).size();
+		}
+		System.out.println("topicConceptMap: topic:"+countTopic+" topic_concept:"+count);		
+	}
+
 	private void createConceptLevelFile(String path) {
 		//Step1: save distinct group,user,datentime 
 		Map<String, Map<String,List<String>>> gud = new HashMap<String, Map<String, List<String>>>(); //g:group u: user d:datentime  // Map<group, Map<user,List<datentime>>>
@@ -498,7 +559,7 @@ public class Data {
 	}
 
 	private void readTopic(String path) {
-		topicMap = new HashMap<String,List<String>>();
+		topicQuestionMap = new HashMap<String,List<String>>();
 		BufferedReader br = null;
 		String line = "";
 		String cvsSplitBy = ",";
@@ -517,9 +578,9 @@ public class Data {
 				clmn = line.split(cvsSplitBy);
 				content = clmn[0];
 				topic = clmn[1];
-				if (topicMap.containsKey(content) != false)
+				if (topicQuestionMap.containsKey(content) != false)
 				{
-					List<String> list = topicMap.get(content);
+					List<String> list = topicQuestionMap.get(content);
 					if (list.contains(topic) == false)
 						list.add(topic);
 				}
@@ -527,7 +588,7 @@ public class Data {
 				{
 					List<String> list = new ArrayList<String>();
 					list.add(topic);
-					topicMap.put(content,list);
+					topicQuestionMap.put(content,list);
 				}
 			}	 
 		} catch (FileNotFoundException e) {
@@ -544,8 +605,8 @@ public class Data {
 			}
 		}	
 		int count = 0;
-		for (String t : topicMap.keySet())
-			count += topicMap.get(t).size();
+		for (String t : topicQuestionMap.keySet())
+			count += topicQuestionMap.get(t).size();
 		System.out.println("topicMap:"+count);					
 	}
 
@@ -963,11 +1024,11 @@ public class Data {
 		}
 		if (difficultyMap != null)			
 			destroy(difficultyMap); //destroy the map
-		if (topicMap != null)
+		if (topicQuestionMap != null)
 		{
-			for (List<String> list : topicMap.values())
+			for (List<String> list : topicQuestionMap.values())
 				destroy(list);
-			destroy(topicMap);
+			destroy(topicQuestionMap);
 		}
 		if (pretestMap != null)
 			destroy(pretestMap);
@@ -1020,7 +1081,13 @@ public class Data {
 				}				
 			}
 			destroy(ratingMap);
-		}		
+		}	
+		if (topicConceptMap != null)
+		{
+			for (List<String> list : topicConceptMap.values())
+				destroy(list);
+			destroy(topicConceptMap);
+		}
 	}
 	
 	private void destroy(Map map) {
@@ -1163,12 +1230,12 @@ public class Data {
 	}
 	
 	public List<String> getTopic(String content){
-		return topicMap.get(content);
+		return topicQuestionMap.get(content);
 	}
 	
 	public String getTopicText(String content){
 		String topics = "";
-		for (String t : topicMap.get(content))
+		for (String t : topicQuestionMap.get(content))
 		{
 			topics += t + " ";
 		}
@@ -1353,5 +1420,16 @@ public class Data {
 					relList.add(example);
 			}			
 		return relList;
+	}
+	
+	public List<String> getConceptTopic(String concept)
+	{
+		List<String> topicList = new ArrayList<String>();
+		for (Entry<String, List<String>> entry : topicConceptMap.entrySet())
+		{	
+			if (entry.getValue().contains(concept))
+				topicList.add(entry.getKey());
+		}
+		return topicList;
 	}
 }

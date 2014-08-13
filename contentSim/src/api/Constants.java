@@ -28,7 +28,12 @@ public class Constants {
 		P_GLOBAL_AS (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::AS";}},
 		P_GLOBAL_COS (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS";}}, 
 		P_LOCAL_AS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS";}}, 
-		P_LOCAL_COS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS";}};
+		P_LOCAL_COS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS";}},
+		P_LOCAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS::GOAL";}},
+		P_LOCAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS::GOAL";}},
+		P_GLOBAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::AS::GOAL";}},
+		P_GLOBAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS::GOAL";}};
+		
 		
 		private Group group;
 		Method(Group group) {
@@ -42,18 +47,8 @@ public class Constants {
 		        return this.group == group;
 		 }
 	};
-//	public static enum Static_Method {
-//		GLOBAL_AS { public String toString(){return "GLOBAL::AS";}},
-//		GLOBAL_COS { public String toString(){return "GLOBAL::COS";}}, 
-//		LOCAL_AS { public String toString(){return "LOCAL::AS";}}, 
-//		LOCAL_COS { public String toString(){return "LOCAL::COS";}},		
-//	}
-//	public static enum P_Method {
-//		P_GLOBAL_AS { public String toString(){return "P::GLOBAL::AS";}},
-//		P_GLOBAL_COS { public String toString(){return "P::GLOBAL::COS";}}, 
-//		P_LOCAL_AS { public String toString(){return "P::LOCAL::AS";}}, 
-//		P_LOCAL_COS { public String toString(){return "P::LOCAL::COS";}},	
-//	}
+	
+	public static final Method[] GOAL_BASED_METHODS = {Method.P_LOCAL_AS_GOAL,Method.P_LOCAL_COS_GOAL,Method.P_GLOBAL_AS_GOAL,Method.P_GLOBAL_COS_GOAL};
 
 	public static final int nDCG_LOG_BASE = 2;
 	public static final double RELEVANEC_THRESHOLD = +1;
