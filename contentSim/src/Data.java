@@ -1296,34 +1296,20 @@ public class Data {
 		return isJudged;
 	}
 	
-	/*
-	 * this method adds all available ratings for that pretest,question,example into a list
-	 * it does not care about the level of the knowledge that provided that rating
-	 * so it can be used in the static evaluation
-	 */
-	public double getAvgRate(String question, String example, String pretest)
+	public List<Integer> getRatingList(String question, String example, String pretest)
 	{
 		List<Integer> rateList = new ArrayList<Integer>();
 		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
 		for (Map<String, List<Integer>> eMap : qMap.values())
 			if (eMap.containsKey(example))			
 				rateList.addAll(eMap.get(example));
-		double sum = 0.0;
-		for (int r : rateList)
-			sum += r;
-		double avg = sum/rateList.size();
-		return avg;
+		return rateList;
 	}
 	
 	/*
 	 * this method implements majority voting, where in case of ties lower relevance is selected
 	 */
-	public static int aggregateJudges(ArrayList<Integer> values) {
-		List<Integer> rateList = new ArrayList<Integer>();
-		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
-		for (Map<String, List<Integer>> eMap : qMap.values())
-			if (eMap.containsKey(example))			
-				rateList.addAll(eMap.get(example));		
+	public int aggregateJudges(List<Integer> values) {
 		HashMap<Integer, Integer> freqs = new HashMap<Integer, Integer>();
 		for (int val : values) {
 			Integer freq = freqs.get(val);
@@ -1358,10 +1344,12 @@ public class Data {
 	public List<String> getRelevantExampleList(String pretest, String question) {
 		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
 		List<String> relList = new ArrayList<String>();
+		List<Integer> ratingList;
 		for (Map<String, List<Integer>> exampleMap : qMap.values())
 			for (String example : exampleMap.keySet())
 			{
-				if (getAvgRate(question,example,pretest) >= api.Constants.RELEVANEC_THRESHOLD)
+				ratingList = exampleMap.get(example);
+				if (aggregateJudges(ratingList) >= api.Constants.RELEVANEC_THRESHOLD)
 					relList.add(example);
 			}			
 		return relList;

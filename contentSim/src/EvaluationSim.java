@@ -1,5 +1,6 @@
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -16,8 +17,8 @@ public class EvaluationSim {
         {	
 			db.setup();
 			Set<String> pretestList = db.getPretestCategories();
-			Map<Integer, Map<String, Double>> condensedSysRankMap;	// Map<rank,Map<example,avgRating>>	
-			Map<Integer, Map<String, Double>> IdealRankMap;
+			Map<Integer, Map<String, Integer>> condensedSysRankMap;	// Map<rank,Map<example,MajorityVotingRating>>	
+			Map<Integer, Map<String, Integer>> IdealRankMap;
 			Set<String> ratedQList;
 			Set<Map<String, Double>> conceptLevelMap;
 			int totalRelevantExample;
@@ -66,13 +67,13 @@ public class EvaluationSim {
 	}
 	
 	private static double getQMeasure(
-			Map<Integer, Map<String, Double>> condensedSysRankMap,
-			Map<Integer, Map<String, Double>> idealRankMap, int totalRelevantExample) {
+			Map<Integer, Map<String, Integer>> condensedSysRankMap,
+			Map<Integer, Map<String, Integer>> idealRankMap, int totalRelevantExample) {
 		double BR = 0,QMeasure;
 		if (totalRelevantExample == 0)
 			QMeasure = 0;
 		else{
-			Map<Integer, Map<String, Double>> cSub, ISub;		
+			Map<Integer, Map<String, Integer>> cSub, ISub;		
 			for (int rank : condensedSysRankMap.keySet())
 			{
 				if (isRelevant(rank,condensedSysRankMap) == false)
@@ -90,16 +91,16 @@ public class EvaluationSim {
 	}
 
 	//test
-	public static int cg(Map<Integer, Map<String, Double>> subMap) {
+	public static int cg(Map<Integer, Map<String, Integer>> subMap) {
 	    int cg = 0;
 		for (int i : subMap.keySet())
-			cg += (Double) subMap.get(i).values().toArray()[0];
+			cg += (Integer) subMap.get(i).values().toArray()[0];
 		return cg;
 	}
 
-	public static Map<Integer, Map<String, Double>> getSubMap(
-			Map<Integer, Map<String, Double>> map, int rank) {
-		Map<Integer, Map<String, Double>> subMap = new HashMap<Integer, Map<String, Double>>();
+	public static Map<Integer, Map<String, Integer>> getSubMap(
+			Map<Integer, Map<String, Integer>> map, int rank) {
+		Map<Integer, Map<String, Integer>> subMap = new HashMap<Integer, Map<String, Integer>>();
 		for (int i : map.keySet())
 		{
 			if (i <= rank)
@@ -111,13 +112,13 @@ public class EvaluationSim {
 	}
 
 	private static double getNDCG(
-			Map<Integer, Map<String, Double>> condensedSysRankMap,
-			Map<Integer, Map<String, Double>> idealRankMap) {
+			Map<Integer, Map<String, Integer>> condensedSysRankMap,
+			Map<Integer, Map<String, Integer>> idealRankMap) {
 		double dg = 0, dgI = 0, gain = 0, gainI = 0,nDCG;
 		for (int rank : condensedSysRankMap.keySet())
 		{
-			gain = (Double) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
-			gainI = (Double) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			gain = (Integer) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			gainI = (Integer) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
 			dg += dg(rank,gain);
 			dgI += dg(rank,gainI);
 		}
@@ -140,7 +141,7 @@ public class EvaluationSim {
 		return dg;
 	}
 
-	private static double getAP(Map<Integer, Map<String, Double>> condensedSysRankMap,int totalRelevantExamples) {
+	private static double getAP(Map<Integer, Map<String, Integer>> condensedSysRankMap,int totalRelevantExamples) {
 		double sum = 0;
 		double AP;
 		if (totalRelevantExamples != 0)
@@ -160,10 +161,10 @@ public class EvaluationSim {
 		return AP;
 	}
 
-	private static boolean isRelevant(int rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
-		Map<String, Double> rMap = condensedSysRankMap.get(rank);
+	private static boolean isRelevant(int rank,Map<Integer, Map<String, Integer>> condensedSysRankMap) {
+		Map<String, Integer> rMap = condensedSysRankMap.get(rank);
 		//rMap has only one <key,value>
-		for (Double rate : rMap.values())
+		for (Integer rate : rMap.values())
 		{
 			if (rate >= api.Constants.RELEVANEC_THRESHOLD)
 				return true;
@@ -171,7 +172,7 @@ public class EvaluationSim {
 		return false;
 	}
 
-	private static int getCountRelevantExamples(int rank,Map<Integer, Map<String, Double>> condensedSysRankMap) {
+	private static int getCountRelevantExamples(int rank,Map<Integer, Map<String, Integer>> condensedSysRankMap) {
 		int count = 0;
 		for (int i : condensedSysRankMap.keySet())
 		{
@@ -186,23 +187,23 @@ public class EvaluationSim {
 	}
 	
 	/*
-	 * idealList is a map with key:rank and value:map<key:example;value:AvgRate>. 
+	 * idealList is a map with key:rank and value:map<key:example;value:MajorityVotingRate>. 
 	 * Example,AvgRating pairs are sorted descendingly with the example with highest ratings at the top.
 	 * rankings are then determined based on the sorted example,rating pairs. 
 	 */
-	private static Map<Integer, Map<String, Double>> getIdealRanking(Map<Integer, Map<String, Double>> condensedSysRankMap) {
-		Map<String,Double> tmp = new HashMap<String,Double>();
-		ValueComparator vc = new ValueComparator(tmp);
-		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);
-		for (Map<String,Double> rMap : condensedSysRankMap.values())
+	private static Map<Integer, Map<String, Integer>> getIdealRanking(Map<Integer, Map<String, Integer>> condensedSysRankMap) {
+		Map<String,Integer> tmp = new HashMap<String,Integer>();
+		ValueComparatorInteger vc = new ValueComparatorInteger(tmp);
+		TreeMap<String,Integer> sortedTreeMap = new TreeMap<String,Integer>(vc);
+		for (Map<String,Integer> rMap : condensedSysRankMap.values())
 			tmp.putAll(rMap);
 		sortedTreeMap.putAll(tmp);
-		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
+		Map<Integer,Map<String,Integer>> sortedRankMap = new HashMap<Integer,Map<String,Integer>>();
 		int irank = 0;
-		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
+		for (Entry<String,Integer> entry : sortedTreeMap.entrySet())
 		{
 			irank++;
-			Map<String,Double> ratingMap = new HashMap<String,Double>();
+			Map<String,Integer> ratingMap = new HashMap<String,Integer>();
 			ratingMap.put(entry.getKey(), entry.getValue());
 			sortedRankMap.put(irank,ratingMap);
 		}
@@ -212,33 +213,52 @@ public class EvaluationSim {
 	/*
 	 * condensedlist is a map with key:rank and value:map<key:example;value:AvgRate>
 	 */
-	private static Map<Integer, Map<String, Double>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
+	private static Map<Integer, Map<String, Integer>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
 		Map<String,Double> tmp = new HashMap<String,Double>();
-		ValueComparator vc = new ValueComparator(tmp);
+		ValueComparatorDouble vc = new ValueComparatorDouble(tmp);
 		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
 		tmp.putAll(ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap));
 		sortedTreeMap.putAll(tmp);
 		int rank = 0;
-		Map<Integer,Map<String,Double>> sortedRankMap = new HashMap<Integer,Map<String,Double>>();
-		String example;		
+		Map<Integer,Map<String,Integer>> sortedRankMap = new HashMap<Integer,Map<String,Integer>>();
+		String example;	
+		List<Integer> ratingList;
 		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
 		{
 			example = entry.getKey();
 			if (db.isJudged(question,example,pretest) == true)
 			{
 				rank ++;
-				Map<String,Double> ratingMap = new HashMap<String,Double>();
-				ratingMap.put(example,db.getAvgRate(question, example, pretest));
+				Map<String,Integer> ratingMap = new HashMap<String,Integer>();
+				ratingList = db.getRatingList(question, example, pretest);
+				ratingMap.put(example,db.aggregateJudges(ratingList));
 				sortedRankMap.put(rank, ratingMap);
 			}			
 		}
 		return sortedRankMap;
 	}
 
-	private static class ValueComparator implements Comparator<String> {
+	private static class ValueComparatorInteger implements Comparator<String> {
+
+	    Map<String, Integer> base;
+	    public ValueComparatorInteger(Map<String, Integer> base) {
+	        this.base = base;
+	    }
+
+	    // Note: this comparator sorts the values descendingly, so that the best activity is in the first element.
+	    public int compare(String a, String b) {
+	    	if (base.get(a) >= base.get(b)) {
+	            return -1;
+	        } else {
+	            return 1;
+	        } // 
+	    } // returning 0 would merge keys	   
+	}
+	
+	private static class ValueComparatorDouble implements Comparator<String> {
 
 	    Map<String, Double> base;
-	    public ValueComparator(Map<String, Double> base) {
+	    public ValueComparatorDouble(Map<String, Double> base) {
 	        this.base = base;
 	    }
 
