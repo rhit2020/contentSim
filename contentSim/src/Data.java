@@ -1305,14 +1305,49 @@ public class Data {
 	{
 		List<Integer> rateList = new ArrayList<Integer>();
 		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
-		for (Map<String, List<Integer>> exampleMap : qMap.values())
-			if (exampleMap.containsKey(example))			
-				rateList.addAll(exampleMap.get(example));
+		for (Map<String, List<Integer>> eMap : qMap.values())
+			if (eMap.containsKey(example))			
+				rateList.addAll(eMap.get(example));
 		double sum = 0.0;
 		for (int r : rateList)
 			sum += r;
 		double avg = sum/rateList.size();
 		return avg;
+	}
+	
+	/*
+	 * this method implements majority voting, where in case of ties lower relevance is selected
+	 */
+	public static int aggregateJudges(ArrayList<Integer> values) {
+		List<Integer> rateList = new ArrayList<Integer>();
+		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
+		for (Map<String, List<Integer>> eMap : qMap.values())
+			if (eMap.containsKey(example))			
+				rateList.addAll(eMap.get(example));		
+		HashMap<Integer, Integer> freqs = new HashMap<Integer, Integer>();
+		for (int val : values) {
+			Integer freq = freqs.get(val);
+			freqs.put(val, (freq == null ? 1 : freq + 1));
+		}
+		int mode = 0;
+		int maxFreq = 0;
+		int tieVal;
+		for (Map.Entry<Integer, Integer> entry : freqs.entrySet())
+		{
+			int freq = entry.getValue();
+			if (freq > maxFreq) {
+				maxFreq = freq;
+				mode = entry.getKey();
+			}
+			//handling the ties, take the lower values
+			if (freq == maxFreq)
+			{
+				tieVal = entry.getKey();
+				if (tieVal < mode)
+					mode = tieVal;				
+			}
+		}
+		return mode;
 	}
 
 	/*
