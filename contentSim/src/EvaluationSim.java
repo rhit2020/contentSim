@@ -5,11 +5,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+
 import api.Constants.Method;
 
 public class EvaluationSim {
 
 	private static Data db;
+	
 	
 	public static void main(String[] args){
 		db = Data.getInstance();
@@ -217,6 +219,7 @@ public class EvaluationSim {
 		Map<String,Double> tmp = new HashMap<String,Double>();
 		ValueComparatorDouble vc = new ValueComparatorDouble(tmp);
 		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
+		
 		tmp.putAll(ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap));
 		sortedTreeMap.putAll(tmp);
 		int rank = 0;

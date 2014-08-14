@@ -1,3 +1,7 @@
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -293,6 +297,7 @@ public class ContentSim {
 		Set<String> qTopicSet = (qTopicList!=null?new HashSet<String>(qTopicList):null);
 		Set<String> conceptTopicSet;
 		boolean isTargetConcept;
+		double lackKnowledge;
 		for (String c : conceptSpace)
 		{
 			if (method.isInGroup(api.Constants.Method.Group.STATIC) == true)
@@ -301,19 +306,27 @@ public class ContentSim {
 				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);	
 			}
 			else
-			{
+			{				
 				if (Arrays.asList(api.Constants.GOAL_BASED_METHODS).contains(method) == true)
 				{
+					if (kmap.get(c) == null)
+						lackKnowledge = 0;
+					else 
+						lackKnowledge = 1-kmap.get(c);	
 					//if the concept is in the target concepts of the topic weight of concept is non-zero, otherwise it is 0.
 					conceptTopicSet = new HashSet<String>(db.getConceptTopic(c));
 					isTargetConcept = (intersection(conceptTopicSet,qTopicSet).size()>0);
-					evector.put(c, isTargetConcept & eConceptSet.contains(c)?1-kmap.get(c):0);
-					qvector.put(c, isTargetConcept & qConceptSet.contains(c)?1-kmap.get(c):0);
+					evector.put(c, isTargetConcept & eConceptSet.contains(c)?lackKnowledge:0);
+					qvector.put(c, isTargetConcept & qConceptSet.contains(c)?lackKnowledge:0);
 				}
 				else
 				{
-					evector.put(c, eConceptSet.contains(c)?1-kmap.get(c):0);
-					qvector.put(c, qConceptSet.contains(c)?1-kmap.get(c):0);
+					if (kmap.get(c) == null)
+						lackKnowledge = 0;
+					else 
+						lackKnowledge = 1-kmap.get(c);					
+					evector.put(c, eConceptSet.contains(c)?lackKnowledge:0);
+					qvector.put(c, qConceptSet.contains(c)?lackKnowledge:0);
 				}	
 			}				
 		}
@@ -347,9 +360,10 @@ public class ContentSim {
 			Set<String> intersectionSet = intersection(qConceptSet, eConceptSet);
 			Set<String> symDifferenceSet = intersection(qConceptSet, eConceptSet);
 			Set<String> qTopicSet = (qTopicList!=null?new HashSet<String>(qTopicList):null);
-
+			double lackKnowledge = 0;
 			if (Arrays.asList(api.Constants.GOAL_BASED_METHODS).contains(method) == true)
 			{
+				
 				//step 1: create the 'a' set:concepts in intersection that are also target concept for the topic
 				Set<String> intersectionTargetset = new HashSet<String>();
 				Set<String> conceptTopicSet;
@@ -364,20 +378,41 @@ public class ContentSim {
 				//step 3: update b set, adding the concepts in step2 to the set that contains concepts that are not in common 
 				symDifferenceSet = union(symDifferenceSet,notIntersectionTargetSet);
 				for (String concept : intersectionTargetset)
-					a += (1-kmap.get(concept));
+				{
+					if (kmap.get(concept) == null)
+						lackKnowledge = 0;
+					else
+						lackKnowledge = 1-kmap.get(concept);
+					a += lackKnowledge;					
+				}
 				for (String concept : symDifferenceSet)
-					b += (1-kmap.get(concept));
+				{
+					if (kmap.get(concept) == null)
+						lackKnowledge = 0;
+					else
+						lackKnowledge = 1-kmap.get(concept);
+					b += lackKnowledge;
+				}
 					
 			}
 			else
 			{
 				for (String concept : intersectionSet)
-				{
-					System.out.println("concept:"+concept+"  "+kmap.get(concept));
-					a += (1-kmap.get(concept));
+				{					
+					if (kmap.get(concept) == null)
+						lackKnowledge = 0;
+					else
+						lackKnowledge = 1-kmap.get(concept);
+					a += lackKnowledge;
 				}
 				for (String concept : symDifferenceSet)
-					b += (1-kmap.get(concept));
+				{
+					if (kmap.get(concept) == null)
+						lackKnowledge = 0;
+					else
+						lackKnowledge = 1-kmap.get(concept);
+					b += lackKnowledge;
+				}
 			}
 		
 		}
