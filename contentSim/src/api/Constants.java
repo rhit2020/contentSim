@@ -49,7 +49,7 @@ public class Constants {
 	};
 	
 	public static final Method[] GOAL_BASED_METHODS = {Method.P_LOCAL_AS_GOAL,Method.P_LOCAL_COS_GOAL,Method.P_GLOBAL_AS_GOAL,Method.P_GLOBAL_COS_GOAL};
-
+	public static final Method[] NORMALIZED_METHODS = {Method.GLOBAL_COS,Method.P_GLOBAL_COS,Method.P_GLOBAL_COS_GOAL}; //the list of methods that has similiarity value between 0 and 1. Others are between -1 and 1.
 	public static final int nDCG_LOG_BASE = 2;
 	public static final double RELEVANEC_THRESHOLD = +1;
 	
@@ -57,4 +57,8 @@ public class Constants {
 	public static final int NOT_HELPFUL_GAIN = 0;
 	public static final int HELPFUL_GAIN = 1;
 	public static final int VERY_HELPFUL_GAIN = 2;
+	public static final int ASSOCIATION_COEFF_SIM_MAX_VALUE = +1;
+	public static final int ASSOCIATION_COEFF_SIM_MIN_VALUE = -1;
+	
+	public static final int[] GAINS = {NOT_HELPFUL_AT_ALL_GAIN,NOT_HELPFUL_GAIN,HELPFUL_GAIN,VERY_HELPFUL_GAIN};
 }

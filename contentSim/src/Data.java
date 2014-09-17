@@ -1330,7 +1330,7 @@ public class Data {
 		return ratingMap.keySet();
 	}
 
-	public void writeToFile(String question,String pretest,String method, double AP, double nDCG, double QMeasure) {
+	public void writeToFile(String question,String pretest,String method, double AP, double nDCG, double QMeasure, double RMSE) {
 		try {
 			String topicText = getTopicText(question);
 			String difficulty = getDifficulty(question);
@@ -1343,6 +1343,10 @@ public class Data {
 			bwMeasures.flush();
 			//
 			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"QMeasure"+"\t"+df.format(QMeasure));
+			bwMeasures.newLine();
+			bwMeasures.flush();
+			//
+			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"RMSE"+"\t"+df.format(RMSE));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 		} catch (IOException e) {

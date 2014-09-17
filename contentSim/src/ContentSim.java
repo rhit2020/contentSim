@@ -55,6 +55,9 @@ public class ContentSim {
 		db.close();
 	}
 
+	/*
+	 * returns a map, with keys as example and values as the calculated similarity value
+	 */
 	public static HashMap<String, Double> calculateStaticSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
@@ -258,8 +261,8 @@ public class ContentSim {
 		for (int i = 0; i < qtree.size(); i++)
 			for(int j = 0; j < etree.size(); j++)			
 				sumOfWeights += alpha[i][j];
-			
-		sim = sim / sumOfWeights;
+		
+		sim = sim / sumOfWeights;		
 		//release space
 		s = null;
 		alpha = null;
@@ -339,7 +342,16 @@ public class ContentSim {
 			eDemoninator += Math.pow(evector.get(c), 2); //each element in the example vector is raised to the power of 2 
 			qDenominator += Math.pow(qvector.get(c), 2); //each element in the example vector is raised to the power of 2 
 		}
-		double sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
+		//this is check for not getting NaN as sim
+		//possible NaN cases: when for one vector all weights are 0 for the static method
+		//for the goal based method, all concepts are not within target in both vector
+		//for personalized method, user already knows all the concepts in either question vector
+		//or the example vector, so this example-question pair has no gain for user.
+		double sim;
+		if (Math.sqrt(qDenominator)*Math.sqrt(eDemoninator) == 0.0)
+			sim = 0.0;
+		else 
+			sim = numerator/(Math.sqrt(qDenominator)*Math.sqrt(eDemoninator)); //square root of the qDenominator/eDenominator
 		return sim;	
 	}
 
@@ -416,7 +428,17 @@ public class ContentSim {
 			}
 		
 		}
-		double sim = (2*a-b)/(2*a+b);
+		//this is check for not getting NaN as sim
+		//possible NaN cases: when user already knows all the concepts in both common concepts and not common concepts, or all of such concepts are not among
+		//reported concepts in knowledge report
+		//so this example-question pair has no gain for user.
+		double sim;
+		if (a==0 & b==0)
+			sim = 0.0;
+		else 
+			sim = (2*a-b)/(2*a+b);
+		if (Double.isNaN(sim))
+			System.out.println(a+"  "+b);
 		return sim;
 	}	
 

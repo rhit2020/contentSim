@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -19,12 +20,15 @@ public class EvaluationSim {
         {	
 			db.setup();
 			Set<String> pretestList = db.getPretestCategories();
-			Map<Integer, Map<String, Integer>> condensedSysRankMap;	// Map<rank,Map<example,MajorityVotingRating>>	
+			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
+			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>
+
 			Map<Integer, Map<String, Integer>> IdealRankMap;
+			Map<String,Double> simMap;
 			Set<String> ratedQList;
 			Set<Map<String, Double>> conceptLevelMap;
 			int totalRelevantExample;
-			double AP,nDCG,QMeasure;
+			double AP,nDCG,QMeasure,RMSE;
 			//evaluate non-personalized methods
 			for (Method method : Method.values())
 			{
@@ -35,26 +39,32 @@ public class EvaluationSim {
 					{
 						if (method.isInGroup(Method.Group.STATIC))
 						{
-							condensedSysRankMap = getCondensedList(question,pretest, method, null);
+							simMap = ContentSim.calculateStaticSim(question,db.getExamples(),method,null);
+							condensedSysRankMap = getCondensedList(question,pretest, simMap);
+							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
 							IdealRankMap = getIdealRanking(condensedSysRankMap);
 							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
 							AP = getAP(condensedSysRankMap,totalRelevantExample);
 							nDCG = getNDCG(condensedSysRankMap, IdealRankMap);
 							QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap, totalRelevantExample);
-							db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure);
+							RMSE = getRMSE(condensedSimScoreMap,condensedSysRankMap,method);
+							db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure,RMSE);
 						}
 						else if (method.isInGroup(Method.Group.PERSONALZIED))
 						{
 							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
 							for (Map<String,Double> kmap : conceptLevelMap)
 							{
-								condensedSysRankMap = getCondensedList(question,pretest,method,kmap);
+								simMap = ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap);
+								condensedSysRankMap = getCondensedList(question,pretest,simMap);
+								condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
 								IdealRankMap = getIdealRanking(condensedSysRankMap);
 								totalRelevantExample = db.getRelevantExampleList(pretest,question).size();
 								AP = getAP(condensedSysRankMap,totalRelevantExample);
 								nDCG = getNDCG(condensedSysRankMap,IdealRankMap);
 								QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap,totalRelevantExample);
-								db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure);						
+								RMSE = getRMSE(condensedSimScoreMap,condensedSysRankMap,method);
+								db.writeToFile(question,pretest,method.toString(),AP,nDCG,QMeasure,RMSE);						
 							}
 						}
 					}										
@@ -68,6 +78,90 @@ public class EvaluationSim {
 		db.close();
 	}
 	
+	private static double getRMSE(Map<String, Double> condensedSimScoreMap,
+			Map<Integer, Map<String, Integer>> condensedSysRankMap, Method method) {
+		double ss = 0.0;
+		double sim,majorityVotingRate;
+		double normalizedSim = 0;
+		double normalizedMajorityVotingRate = 0.0;
+		for (String example : condensedSimScoreMap.keySet())
+		{
+			sim = condensedSimScoreMap.get(example);
+			majorityVotingRate = getMajorityVoting(example,condensedSysRankMap);
+			if (majorityVotingRate == -1)
+			{
+				System.out.println("UNEXPECTED ERROR : NO MAJORITY VOTING FOR THE EXAMPLE: "+example);
+				continue;
+			}
+			normalizedMajorityVotingRate = normalizeVoting(majorityVotingRate);
+			if (Arrays.asList(api.Constants.NORMALIZED_METHODS).contains(method) == false){//you should normalize the similarity score, it is between -1 and 1.
+				normalizedSim = normalizedSim(sim);
+			}
+			else {
+				normalizedSim = sim; //the similarity is already between 0,1.
+			}
+			ss += Math.pow((normalizedSim-normalizedMajorityVotingRate),2);
+		}
+		double mse = ss/condensedSimScoreMap.size();
+		double rmse = Math.sqrt(mse);
+		return rmse;
+	}
+
+	/*
+	 * returns the normalized value for the majority voting based on the gains
+	 */
+	private static double normalizeVoting(double majorityVotingRate) {
+		double min = Double.MAX_VALUE;
+		double max = Double.MIN_VALUE;
+		for (int i : api.Constants.GAINS)
+		{
+			if (i < min)
+				min = i;
+			if (i > max)
+				max = i;
+		}		
+		return (majorityVotingRate-min)/(max-min);
+	}
+
+	private static int getMajorityVoting(String example,
+			Map<Integer, Map<String, Integer>> condensedSysRankMap) {
+		for (Map<String,Integer> map : condensedSysRankMap.values())
+		{
+			if (map.containsKey(example))
+			{
+				return map.get(example);
+			}
+		}
+		return -1;
+	}
+
+	/*
+	 * returns a normalized score for the given similarity value
+	 */
+	private static double normalizedSim(double sim) {
+		double max = api.Constants.ASSOCIATION_COEFF_SIM_MAX_VALUE;
+		double min = api.Constants.ASSOCIATION_COEFF_SIM_MIN_VALUE;
+        double n = (sim - min)/(max-min);
+		return n;
+	}
+
+	/*
+	 * returns a condensed map for examples being rated with example as the key and the similarity score as the value
+	 */
+	private static Map<String, Double> getcondensedSimScoreList(
+			String question, String pretest, Map<String, Double> simMap) {
+		
+		Map<String,Double> condensedSimScoreMap = new HashMap<String,Double>();
+		for (String example : simMap.keySet())
+		{
+			if (db.isJudged(question,example,pretest) == true)
+			{				
+				condensedSimScoreMap.put(example,simMap.get(example));
+			}			
+		}
+		return condensedSimScoreMap;
+	}
+
 	private static double getQMeasure(
 			Map<Integer, Map<String, Integer>> condensedSysRankMap,
 			Map<Integer, Map<String, Integer>> idealRankMap, int totalRelevantExample) {
@@ -190,7 +284,7 @@ public class EvaluationSim {
 	
 	/*
 	 * idealList is a map with key:rank and value:map<key:example;value:MajorityVotingRate>. 
-	 * Example,AvgRating pairs are sorted descendingly with the example with highest ratings at the top.
+	 * Example,MajorityRating pairs are sorted descendingly with the example with highest ratings at the top.
 	 * rankings are then determined based on the sorted example,rating pairs. 
 	 */
 	private static Map<Integer, Map<String, Integer>> getIdealRanking(Map<Integer, Map<String, Integer>> condensedSysRankMap) {
@@ -213,14 +307,14 @@ public class EvaluationSim {
 	}
 
 	/*
-	 * condensedlist is a map with key:rank and value:map<key:example;value:AvgRate>
+	 * condensedlist is a map with key:rank and value:map<key:example;value:MajorityVoting>
 	 */
-	private static Map<Integer, Map<String, Integer>> getCondensedList(String question,String pretest, Method method, Map<String, Double> kmap) {
+	private static Map<Integer, Map<String, Integer>> getCondensedList(String question,String pretest, Map<String, Double> simMap) {
 		Map<String,Double> tmp = new HashMap<String,Double>();
 		ValueComparatorDouble vc = new ValueComparatorDouble(tmp);
 		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
 		
-		tmp.putAll(ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap));
+		tmp.putAll(simMap);
 		sortedTreeMap.putAll(tmp);
 		int rank = 0;
 		Map<Integer,Map<String,Integer>> sortedRankMap = new HashMap<Integer,Map<String,Integer>>();
