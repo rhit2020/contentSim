@@ -437,8 +437,6 @@ public class ContentSim {
 			sim = 0.0;
 		else 
 			sim = (2*a-b)/(2*a+b);
-		if (Double.isNaN(sim))
-			System.out.println(a+"  "+b);
 		return sim;
 	}	
 
