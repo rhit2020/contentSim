@@ -383,7 +383,7 @@ public class Data {
 			String question;
 			String example;
 			int rating;
-			int Nrating;
+			int gain;
 			Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>> pretestMap;
 			Map<Map<String,Double>,Map<String,List<Integer>>> questionMap;
 			Map<String,Double> knowledgeMap;
@@ -403,14 +403,14 @@ public class Data {
 				question = clmn[3];
 				example = clmn[4];
 				rating = Integer.parseInt(clmn[5]);
-				//map ratings (0,1,2,3) to (-2,-1,0,+1,+2) to penalize examples that are not helpful 
-				Nrating = getNrating(rating);
+				//map ratings to gains 
+				gain = getGain(rating);
 				pretest = getPretestLevel(user);
 				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
 					list = new ArrayList<Integer>();
-					list.add(Nrating);
+					list.add(gain);
 					exampleMap = new HashMap<String,List<Integer>>();
 					exampleMap.put(example, list);
 					questionMap = new HashMap<Map<String,Double>,Map<String,List<Integer>>>();
@@ -425,7 +425,7 @@ public class Data {
 					if (pretestMap.containsKey(question) == false)
 					{
 						list = new ArrayList<Integer>();
-						list.add(Nrating);
+						list.add(gain);
 						exampleMap = new HashMap<String,List<Integer>>();
 						exampleMap.put(example, list);
 						questionMap = new HashMap<Map<String,Double>,Map<String,List<Integer>>>();
@@ -437,7 +437,7 @@ public class Data {
 						if (questionMap.containsKey(knowledgeMap) == false)
 						{
 							list = new ArrayList<Integer>();
-							list.add(Nrating);
+							list.add(gain);
 							exampleMap = new HashMap<String,List<Integer>>();
 							exampleMap.put(example, list);
 							questionMap.put(knowledgeMap, exampleMap);
@@ -448,13 +448,13 @@ public class Data {
 							if (exampleMap.containsKey(example) == false)
 							{
 								list = new ArrayList<Integer>();
-								list.add(Nrating);
+								list.add(gain);
 								exampleMap.put(example, list);
 							}
 							else
 							{
 								list = exampleMap.get(example);
-								list.add(Nrating);
+								list.add(gain);
 							}
 						}
 					}
@@ -486,7 +486,7 @@ public class Data {
 		return conceptLevelMap.get(group).get(user).get(datentime);
 	}
 
-	private int getNrating(int rating) {
+	private int getGain(int rating) {
 		int Nrating = 0;
 		switch (rating)
         {
@@ -1130,6 +1130,8 @@ public class Data {
 	//String sqlCommand = "select distinct concept from rel_content_concept where title ='"+content+"';";
 	public List<String> getConcepts(String content) {
 		Map<String,Double> weightMap = conceptMap.get(content);
+		if (weightMap==null)
+			System.out.println(content);
 		List<String> conceptList = new ArrayList<String>();
 		for (String c : weightMap.keySet())
 			conceptList.add(c);
@@ -1235,10 +1237,17 @@ public class Data {
 	
 	public String getTopicText(String content){
 		String topics = "";
-		for (String t : topicQuestionMap.get(content))
+		if (topicQuestionMap.get(content).size() == 1)
 		{
-			topics += t + " ";
+			topics = topicQuestionMap.get(content).get(0);
 		}
+		else
+		{
+			for (String t : topicQuestionMap.get(content))
+			{
+				topics += t + " ";
+			}
+		}		
 		return topics;
 	}
 	
@@ -1409,7 +1418,7 @@ public class Data {
 
 	/*
 	 * this method adds all the relevant example for the question to the list
-	 * relevant examples have an AVERAGE gain that is either +1:helpful or is +2:very helpful.
+	 * relevant examples have a majority voting gain that is either +1:helpful or is +2:very helpful.
 	 * AVERAGE gain is obtained by summing all the available gains for the example and then dividing them by the total number of the gains.
 	 */	 
 	public List<String> getRelevantExampleList(String pretest, String question) {
@@ -1432,7 +1441,10 @@ public class Data {
 		for (Entry<String, List<String>> entry : topicConceptMap.entrySet())
 		{	
 			if (entry.getValue().contains(concept))
-				topicList.add(entry.getKey());
+			{
+				if (topicList.contains(entry.getKey()) == false)
+					topicList.add(entry.getKey());
+			}
 		}
 		return topicList;
 	}

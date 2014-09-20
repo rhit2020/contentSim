@@ -200,9 +200,7 @@ public class EvaluationSim {
 		for (int i : map.keySet())
 		{
 			if (i <= rank)
-				subMap.put(i, map.get(i));			
-			else
-				break;
+				subMap.put(i, map.get(i));	// we should iterate through all elements in the map, because HashMap is not sorted			
 		}
 		return subMap;
 	}
@@ -242,7 +240,7 @@ public class EvaluationSim {
 		double AP;
 		if (totalRelevantExamples != 0)
 		{
-			for (int rank : condensedSysRankMap.keySet())
+			for (int rank : condensedSysRankMap.keySet())  //we need to go over all rank to check if our ranking is good
 			{
 				if (isRelevant(rank,condensedSysRankMap) == false)
 					sum += 0;
@@ -270,14 +268,13 @@ public class EvaluationSim {
 
 	private static int getCountRelevantExamples(int rank,Map<Integer, Map<String, Integer>> condensedSysRankMap) {
 		int count = 0;
-		for (int i : condensedSysRankMap.keySet())
+		for (int i : condensedSysRankMap.keySet()) // we need for loop because HashMap is not sorted.
 		{
 			if (i <= rank)
 			{
 				if (isRelevant(rank,condensedSysRankMap) == true)
 					count++;
 			}
-			//note: since map is not sorted, you have to iterate all the keys in the map
 		}
 		return count;
 	}

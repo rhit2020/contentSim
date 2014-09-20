@@ -1,7 +1,3 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,16 +14,13 @@ import api.Constants.Method;;
 public class ContentSim {
 
 	private static Data db;
-	//private static DB db;
 	public static void main(String[] args){
 		
-		//get level of user knowledge in all concepts
 		db = Data.getInstance();
-//		db  = new DB();
-		// **** for test ****//
+		// **** for test **** START
 //		String[] qList = {"jArray2"};	
 //		String[] eList = {"inheritance1_v2"};
-		// **** for test ****//
+		// **** for test **** END
 		if (db.isReady())
         {	
 			db.setup();
@@ -42,7 +35,7 @@ public class ContentSim {
 					{					
 						rankMap = calculateStaticSim(q, eList,method,null);
 						for (String e : rankMap.keySet())
-							db.insertContentSim(q, e, rankMap.get(q), method.toString());
+							db.insertContentSim(q, e, rankMap.get(e), method.toString());
 					}
 				}
 				
@@ -94,17 +87,17 @@ public class ContentSim {
 			}
 			case GLOBAL_COS:
 			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null); 
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
 				break;
 			}
 			case LOCAL_AS:
 			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null); 
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
 				break;
 			}
 			case LOCAL_COS:
 			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null); 
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
 				break;
 			}
 			//personalized methods
@@ -115,28 +108,28 @@ public class ContentSim {
 			}
 			case P_GLOBAL_COS:
 			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null); 
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
 				break;
 			}
 			case P_LOCAL_AS:
 			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null); 
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
 				break;
 			}
 			case P_LOCAL_COS:
 			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null); 
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
 				break;
 			}
 			//personalized with focus on current goal
 			case P_LOCAL_AS_GOAL:
 			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,qTopicList); 
+				sim = localSim(qtree,etree,"AS",null,null,method,kmap,qTopicList,q); 
 				break;
 			}
 			case P_LOCAL_COS_GOAL:
 			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,qTopicList); 
+				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
 				break;
 			}
 			case P_GLOBAL_AS_GOAL:
@@ -146,7 +139,7 @@ public class ContentSim {
 			}
 			case P_GLOBAL_COS_GOAL:
 			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,qTopicList); 
+				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
 				break;
 			}
 			default:
@@ -170,7 +163,7 @@ public class ContentSim {
 			subtree = db.getConceptsInSameLine(content, line);
 			if (updateSubtreeList(subtree,subtreeList) == true)
 				subtreeList.add(subtree);	
-			List<Integer> endLines = db.getEndLineBlock(content,line);			
+			List<Integer> endLines = db.getEndLineBlock(content,line); //in case that line has a concept that has an end line different than the start line, endlines would be nonempty			
 			for (int e : endLines)
 			{
 				//create subtree for the block
@@ -196,7 +189,7 @@ public class ContentSim {
 	 * Return value ranges from -1 to 1. 
 	 */
 	private static double localSim(List<ArrayList<String>> qtree, List<ArrayList<String>> etree, 
-			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList)
+			                       String variant, Map<String,Double> qConceptWeight, Map<String,Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList, String q2)
 	{
 		double [][] s = new double[qtree.size()][etree.size()]; 
 		int [][] alpha = new int[qtree.size()][etree.size()];	
@@ -215,7 +208,7 @@ public class ContentSim {
 				}
 				else if (variant.equals("COS"))
 				{
-					s[i][j] = simCosine(qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,method,kmap,qTopicList);
+					s[i][j] = simCosine(qtree.get(i),etree.get(j),qConceptWeight,eConceptWeight,method,kmap,qTopicList,q2);
 				}
 			}
 		//print(s);//print s[i][j]
@@ -290,7 +283,7 @@ public class ContentSim {
 	/* 
 	 * Return value (cosine similarity) ranges between 0-1 since tfidf values are not negative.
 	 */
-	private static double simCosine(List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList) {
+	private static double simCosine(List<String> qConcepts, List<String> eConcepts, Map<String, Double> qConceptWeight, Map<String, Double> eConceptWeight, Method method, Map<String, Double> kmap, List<String> qTopicList,String q) {
 		//create concept space by union of two sets. Set drops repeated elements and contains unique values
 		Set<String> qConceptSet = new HashSet<String>(qConcepts);
 		Set<String> eConceptSet = new HashSet<String>(eConcepts);
@@ -306,7 +299,7 @@ public class ContentSim {
 			if (method.isInGroup(api.Constants.Method.Group.STATIC) == true)
 			{
 				evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
-				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);	
+				qvector.put(c, qConceptSet.contains(c)?qConceptWeight.get(c):0);				
 			}
 			else
 			{				
@@ -319,8 +312,8 @@ public class ContentSim {
 					//if the concept is in the target concepts of the topic weight of concept is non-zero, otherwise it is 0.
 					conceptTopicSet = new HashSet<String>(db.getConceptTopic(c));
 					isTargetConcept = (intersection(conceptTopicSet,qTopicSet).size()>0);
-					evector.put(c, isTargetConcept & eConceptSet.contains(c)?lackKnowledge:0);
-					qvector.put(c, isTargetConcept & qConceptSet.contains(c)?lackKnowledge:0);
+					evector.put(c, isTargetConcept && eConceptSet.contains(c)?lackKnowledge:0);
+					qvector.put(c, isTargetConcept && qConceptSet.contains(c)?lackKnowledge:0);
 				}
 				else
 				{
@@ -370,7 +363,7 @@ public class ContentSim {
 		else
 		{
 			Set<String> intersectionSet = intersection(qConceptSet, eConceptSet);
-			Set<String> symDifferenceSet = intersection(qConceptSet, eConceptSet);
+			Set<String> symDifferenceSet = symDifference(qConceptSet, eConceptSet);
 			Set<String> qTopicSet = (qTopicList!=null?new HashSet<String>(qTopicList):null);
 			double lackKnowledge = 0;
 			if (Arrays.asList(api.Constants.GOAL_BASED_METHODS).contains(method) == true)
