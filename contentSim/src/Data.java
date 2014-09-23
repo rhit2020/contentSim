@@ -629,7 +629,7 @@ public class Data {
 				}
 				clmn = line.split(cvsSplitBy);
 				content = clmn[0];
-				difficulty = clmn[1];				
+				difficulty = clmn[1];			
 				difficultyMap.put(content,difficulty);
 			}	 
 		} catch (FileNotFoundException e) {
@@ -1343,6 +1343,8 @@ public class Data {
 		try {
 			String topicText = getTopicText(question);
 			String difficulty = getDifficulty(question);
+			if (difficulty.equals("null"))
+				System.out.println("null diff");
 			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"AP"+"\t"+df.format(AP));
 			bwMeasures.newLine();
 			bwMeasures.flush();
