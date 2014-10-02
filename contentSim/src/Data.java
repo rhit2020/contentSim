@@ -25,6 +25,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import api.Constants.Method;
+
 public class Data {
 	
 	private Map<String,List<String>> contentMap = null; //keys are content type (example,question) and values are the list of the contents 
@@ -72,7 +74,7 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
-		fileMeasures = new File(path+"outputMeasures.txt");
+		fileMeasures = new File(path+"outputMeasures.csv");
 		try {
 			if (!fileMeasures.exists())
 				fileMeasures.createNewFile();
@@ -1339,27 +1341,29 @@ public class Data {
 		return ratingMap.keySet();
 	}
 
-	public void writeToFile(String question,String pretest,String method, double AP, double nDCG, double QMeasure, double RMSE) {
+	public void writeToFile(String question,String pretest,Method method, double AP, double nDCG, double QMeasure, double RMSE) {
 		try {
 			String topicText = getTopicText(question);
 			String difficulty = getDifficulty(question);
 			if (difficulty.equals("null"))
 				System.out.println("null diff");
-			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"AP"+"\t"+df.format(AP));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"nDCG"+"\t"+df.format(nDCG));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"QMeasure"+"\t"+df.format(QMeasure));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure));
 			bwMeasures.newLine();
 			bwMeasures.flush();
-			//
-			bwMeasures.write(question+"\t"+topicText+"\t"+difficulty+"\t"+pretest+"\t"+method+"\t"+"RMSE"+"\t"+df.format(RMSE));
-			bwMeasures.newLine();
-			bwMeasures.flush();
+			if (method != Method.RANDOM_BASELINE)
+			{
+				bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
+			    bwMeasures.newLine();
+			    bwMeasures.flush();
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

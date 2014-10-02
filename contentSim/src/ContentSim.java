@@ -52,6 +52,7 @@ public class ContentSim {
 	 * returns a map, with keys as example and values as the calculated similarity value
 	 */
 	public static HashMap<String, Double> calculateStaticSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
+		HashMap<String,Double> rankMap = new HashMap<String,Double>();
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
 		Map<String,Double> qConceptWeight = null;
@@ -61,7 +62,6 @@ public class ContentSim {
 		double sim = 0.0;
 		if (db == null)
 			db = Data.getInstance(); //the singleton instance
-		HashMap<String,Double> rankMap = new HashMap<String,Double>();
 		//creating list of concepts in question
 		qConcepts = db.getConcepts(q);
 		//TFIDF values used as weight of concepts in question
@@ -146,7 +146,7 @@ public class ContentSim {
 				break;								
 			}
 			rankMap.put(e, sim);
-		}	
+		}				
 		return rankMap;
 	}
 	

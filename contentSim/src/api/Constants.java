@@ -21,6 +21,7 @@ public class Constants {
 	
 	public static enum Method 
 	{
+		RANDOM_BASELINE (Group.BASELINE) { public String toString(){return "RANDOM::BASELINE";}},
 		GLOBAL_AS (Group.STATIC) { public String toString(){return "GLOBAL::AS";}},
 		GLOBAL_COS (Group.STATIC){ public String toString(){return "GLOBAL::COS";}}, 
 		LOCAL_AS (Group.STATIC){ public String toString(){return "LOCAL::AS";}}, 
@@ -40,6 +41,7 @@ public class Constants {
 	        this.group = group;
 	    }
 		public enum Group {
+			    BASELINE,
 		        STATIC,
 		        PERSONALZIED;		       
 		}
