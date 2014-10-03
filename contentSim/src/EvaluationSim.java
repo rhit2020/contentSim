@@ -292,7 +292,7 @@ public class EvaluationSim {
 		{
 			if (i <= rank)
 			{
-				if (isRelevant(rank,condensedSysRankMap) == true)
+				if (isRelevant(i,condensedSysRankMap) == true)
 					count++;
 			}
 		}

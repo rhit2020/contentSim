@@ -30,10 +30,10 @@ public class Constants {
 		P_GLOBAL_COS (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS";}}, 
 		P_LOCAL_AS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS";}}, 
 		P_LOCAL_COS (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS";}},
-		P_LOCAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS::GOAL";}},
-		P_LOCAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS::GOAL";}},
 		P_GLOBAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::AS::GOAL";}},
-		P_GLOBAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS::GOAL";}};
+		P_GLOBAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS::GOAL";}},
+		P_LOCAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS::GOAL";}},
+		P_LOCAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS::GOAL";}};
 		
 		
 		private Group group;

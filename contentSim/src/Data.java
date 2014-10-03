@@ -1434,7 +1434,10 @@ public class Data {
 			{
 				ratingList = exampleMap.get(example);
 				if (aggregateJudges(ratingList) >= api.Constants.RELEVANEC_THRESHOLD)
-					relList.add(example);
+				{
+					if (relList.contains(example) == false)
+						relList.add(example);
+				}
 			}			
 		return relList;
 	}
