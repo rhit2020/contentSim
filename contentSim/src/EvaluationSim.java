@@ -43,19 +43,7 @@ public class EvaluationSim {
 					ratedQList = db.getRatedQuestions(pretest);
 					for (String question : ratedQList)
 					{
-						if (method.isInGroup(Method.Group.BASELINE))
-						{
-							List<String> list = Arrays.asList(db.getExamples());
-							Collections.shuffle(list);
-							condensedSysRankMap = getCondensedList(question,pretest,list);
-							IdealRankMap = getIdealRanking(condensedSysRankMap);
-							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
-							AP = getAP(condensedSysRankMap,totalRelevantExample);
-							nDCG = getNDCG(condensedSysRankMap, IdealRankMap);
-							QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap, totalRelevantExample);
-							db.writeToFile(question,pretest,method,AP,nDCG,QMeasure,-1);
-						}
-						if (method.isInGroup(Method.Group.STATIC))
+						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE))
 						{
 							simMap = ContentSim.calculateStaticSim(question,db.getExamples(),method,null);
 							//sorting the simMap

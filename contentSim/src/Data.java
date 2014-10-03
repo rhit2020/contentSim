@@ -1358,12 +1358,10 @@ public class Data {
 			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure));
 			bwMeasures.newLine();
 			bwMeasures.flush();
-			if (method != Method.RANDOM_BASELINE)
-			{
-				bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
-			    bwMeasures.newLine();
-			    bwMeasures.flush();
-			}
+		    //
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
+		    bwMeasures.newLine();
+		    bwMeasures.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

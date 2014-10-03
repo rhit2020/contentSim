@@ -79,6 +79,12 @@ public class ContentSim {
 			etree = getSubtrees(e);
 			//calculate global similarity 				
 			switch(method){
+			//baseline method
+			case RANDOM_BASELINE:
+			{
+				sim = 0.5; // the similarity of random model for each example is same random number 0.5.
+				break;
+			}
 			//static methods
 			case GLOBAL_AS:
 			{
