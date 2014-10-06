@@ -35,6 +35,8 @@ public class EvaluationSim {
 			Map<String,Double> tmp;
 			ValueComparatorDouble vc;
 			TreeMap<String,Double> sortedTreeMap;
+			String[] exampleList = db.getExamples();
+			Collections.shuffle(Arrays.asList(exampleList)); //list is shuffled 
 			//evaluate non-personalized methods
 			for (Method method : Method.values())
 			{
@@ -45,7 +47,7 @@ public class EvaluationSim {
 					{
 						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE))
 						{
-							simMap = ContentSim.calculateStaticSim(question,db.getExamples(),method,null);
+							simMap = ContentSim.calculateStaticSim(question,exampleList,method,null);
 							//sorting the simMap
 							tmp = new HashMap<String,Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -68,7 +70,7 @@ public class EvaluationSim {
 							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
 							for (Map<String,Double> kmap : conceptLevelMap)
 							{
-								simMap = ContentSim.calculateStaticSim(question,db.getExamples(),method,kmap);
+								simMap = ContentSim.calculateStaticSim(question,exampleList,method,kmap);
 								//sorting the simMap
 								tmp = new HashMap<String,Double>();
 								vc = new ValueComparatorDouble(tmp);

@@ -127,8 +127,8 @@ jba_ques,Classes,medium,Average,RANDOM::BASELINE,nDCG,0.43
 jba_ques,Classes,medium,Average,RANDOM::BASELINE,QMeasure,0.07
 jba_ques,Classes,medium,Average,RANDOM::BASELINE,RMSE,0.68
 jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,AP,0.71
-jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,nDCG,0.87
-jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,QMeasure,0.77
+jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,nDCG,0.78
+jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,QMeasure,0.73
 jboolean_var,Boolean_Expressions,easy,Average,RANDOM::BASELINE,RMSE,0.38
 jInheritance1,Inheritance,hard,Average,RANDOM::BASELINE,AP,0
 jInheritance1,Inheritance,hard,Average,RANDOM::BASELINE,nDCG,0

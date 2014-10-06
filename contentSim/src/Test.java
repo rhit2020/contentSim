@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -52,28 +54,40 @@ public class Test extends TestCase{
 //		assertEquals(d.aggregateJudges(list),-1);
 //	}
 	
-	public void testTreeMap()
+//	public void testTreeMap()
+//	{
+//		Map<String,Double> tmp = new HashMap<String,Double>();
+//		ValueComparatorDouble vc = new ValueComparatorDouble(tmp);
+//		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
+//		
+//		HashMap<String,Double> testM = new HashMap<String,Double>();
+//		testM.put("A",1.0);
+//		testM.put("B", 1.5);
+//		testM.put("C",2.0);
+//		testM.put("Z",0.0);		
+//		tmp.putAll(testM);		
+//		sortedTreeMap.putAll(tmp);
+//		
+//		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
+//		{
+//			System.out.println(entry.getKey()+" "+entry.getValue());
+//		}
+//		System.out.println("-----");
+//		List<String> list = new ArrayList<String>(sortedTreeMap.keySet());
+//		for (String s : list)
+//			System.out.println(s);
+//	}
+	
+	public void testShuffle()
 	{
-		Map<String,Double> tmp = new HashMap<String,Double>();
-		ValueComparatorDouble vc = new ValueComparatorDouble(tmp);
-		TreeMap<String,Double> sortedTreeMap = new TreeMap<String,Double>(vc);		
-		
-		HashMap<String,Double> testM = new HashMap<String,Double>();
-		testM.put("A",1.0);
-		testM.put("B", 1.5);
-		testM.put("C",2.0);
-		testM.put("Z",0.0);		
-		tmp.putAll(testM);		
-		sortedTreeMap.putAll(tmp);
-		
-		for (Entry<String,Double> entry : sortedTreeMap.entrySet())
-		{
-			System.out.println(entry.getKey()+" "+entry.getValue());
-		}
-		System.out.println("-----");
-		List<String> list = new ArrayList<String>(sortedTreeMap.keySet());
-		for (String s : list)
-			System.out.println(s);
+		String [] file = {"H1.txt","H2.txt","H3.txt","M4.txt","M5.txt","M6.txt"};
+		for (String s : file)
+			System.out.print(s+" ");
+		System.out.println();
+		//randomized files
+		Collections.shuffle(Arrays.asList(file));
+		for (String s : file)
+			System.out.print(s+" ");
 	}
 	
 	private static class ValueComparatorDouble implements Comparator<String> {
