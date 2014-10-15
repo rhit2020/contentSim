@@ -16,7 +16,7 @@ public class Constants {
 	public static final class Pretest{
 		public static final int LOW_MIN = 0;
 		public static final int AVE_MIN = 3;
-		public static final int HIGH_MIN = 6;
+		public static final int HIGH_MIN = 5;
 	}
 	
 	public static enum Method 

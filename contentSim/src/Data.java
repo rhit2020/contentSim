@@ -513,10 +513,12 @@ public class Data {
 	private String getPretestLevel(String user) {
 		String level = "";
 		double pretest = pretestMap.get(user);
-		if( pretest < api.Constants.Pretest.AVE_MIN)
-			level = "Low";
-		else if (pretest < api.Constants.Pretest.HIGH_MIN)
-			level = "Average";
+//		if( pretest < api.Constants.Pretest.AVE_MIN)
+//			level = "Low";
+//		else if (pretest < api.Constants.Pretest.HIGH_MIN)
+//			level = "Average";
+		if( pretest < api.Constants.Pretest.HIGH_MIN)
+			level = "Low";		
 		else
 			level = "High";
 		return level;
