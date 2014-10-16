@@ -1370,6 +1370,7 @@ public class Data {
 		
 	}
 
+	//TODO this is changed to gather ratings from all users
 	public boolean isJudged(String question, String example, String pretest) {
 		boolean isJudged = false;
 		Map<Map<String, Double>, Map<String, List<Integer>>> qMap = ratingMap.get(pretest).get(question);
@@ -1380,8 +1381,21 @@ public class Data {
 				break;
 			}
 		return isJudged;
+
+//		for (Map<String, Map<Map<String, Double>, Map<String, List<Integer>>>> pretestMap : ratingMap.values())
+//		{
+//			Map<Map<String, Double>, Map<String, List<Integer>>> qMap = pretestMap.get(question);
+//			if (qMap != null)
+//			{
+//				for (Map<String, List<Integer>> exampleMap : qMap.values())
+//					if (exampleMap.containsKey(example))			
+//						return true;
+//			}			
+//		}	
+//		return false;
 	}
 	
+	//TODO this is changed to gather ratings from all users
 	public List<Integer> getRatingList(String question, String example, String pretest)
 	{
 		List<Integer> rateList = new ArrayList<Integer>();
@@ -1390,6 +1404,19 @@ public class Data {
 			if (eMap.containsKey(example))			
 				rateList.addAll(eMap.get(example));
 		return rateList;
+		
+//		List<Integer> rateList = new ArrayList<Integer>();
+//		for (Map<String, Map<Map<String, Double>, Map<String, List<Integer>>>> pretestMap : ratingMap.values())
+//		{
+//			Map<Map<String, Double>, Map<String, List<Integer>>> qMap = pretestMap.get(question);
+//			if (qMap != null)
+//			{
+//				for (Map<String, List<Integer>> eMap : qMap.values())
+//					if (eMap.containsKey(example))			
+//						rateList.addAll(eMap.get(example)); // it keeps the repetitive numbers. It is necessary to know frequency for aggragation of judges.
+//			}
+//		}
+//		return rateList;
 	}
 	
 	/*
