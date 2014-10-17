@@ -407,7 +407,9 @@ public class Data {
 				rating = Integer.parseInt(clmn[5]);
 				//map ratings to gains 
 				gain = getGain(rating);
-				pretest = getPretestLevel(user);
+				//replaced std with pretest
+//				pretest = getPretestLevel(user);
+				pretest = user;
 				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
@@ -1349,19 +1351,20 @@ public class Data {
 			String difficulty = getDifficulty(question);
 			if (difficulty.equals("null"))
 				System.out.println("null diff");
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP));
+			String pretestCat = getPretestLevel(pretest); //TODO: pretest is actually a user now.
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP)+","+pretestCat);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG)+","+pretestCat);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure)+","+pretestCat);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 		    //
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE)+","+pretestCat);
 		    bwMeasures.newLine();
 		    bwMeasures.flush();
 		} catch (IOException e) {
