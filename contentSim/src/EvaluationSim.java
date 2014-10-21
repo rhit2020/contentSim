@@ -16,11 +16,11 @@ public class EvaluationSim {
 	private static Data db;
 	
 	
-	public static void evaluate(String ratingFileName){
+	public static void evaluate(String ratingFileName, int all){
 		db = Data.getInstance();
 		if (db.isReady())
         {	
-			db.setup(ratingFileName);
+			db.setup(ratingFileName,all);
 			Set<String> pretestList = db.getPretestCategories();
 			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
 			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>

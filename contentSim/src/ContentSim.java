@@ -23,7 +23,7 @@ public class ContentSim {
 		// **** for test **** END
 		if (db.isReady())
         {	
-			db.setup(ratingFileName);
+			db.setup(ratingFileName,0);
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;

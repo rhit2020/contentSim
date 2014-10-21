@@ -60,7 +60,7 @@ public class Data {
 		return data;
 	}
 	
-	public void setup(String ratingFileName) {
+	public void setup(String ratingFileName, int all) {
 		df = new DecimalFormat();
 		df.setMaximumFractionDigits(2);
 		
@@ -74,7 +74,7 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
-		fileMeasures = new File(path+"outputMeasures_"+ratingFileName);
+		fileMeasures = new File(path+"outputMeasures_"+all+"_"+ratingFileName);
 		try {
 			if (!fileMeasures.exists())
 				fileMeasures.createNewFile();
@@ -102,7 +102,7 @@ public class Data {
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
 //    	createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
 		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
-		readRatings(path+ratingFileName);//user,group,datentime,question,example,rating (0,1,2,3)
+		readRatings(path+ratingFileName,all);//user,group,datentime,question,example,rating (0,1,2,3)
 		readTopicConcept(path+"topicOutcomeConcepts.csv");
 //		readUserMinMaxRating(path+"user_min_max_rating.csv"); 
 		/*I do not use it because normalization has no meaning here with ordinal ratings.
@@ -417,7 +417,7 @@ public class Data {
 		System.out.println("conceptLevelMap:"+count);								
 	}
 
-	private void readRatings(String path) {
+	private void readRatings(String path, int all) {
 		//user,group,datentime,question,example,rating (0,1,2,3)
 		ratingMap = new HashMap<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>>();
 		BufferedReader br = null;
@@ -439,7 +439,7 @@ public class Data {
 			Map<String,Double> knowledgeMap;
 			Map<String,List<Integer>> exampleMap;
 			List<Integer> list;
-			String pretest;
+			String pretest = "";
 			while ((line = br.readLine()) != null) {
 				if (isHeader)
 				{
@@ -455,7 +455,10 @@ public class Data {
 				rating = Integer.parseInt(clmn[5]);
 				//map ratings to gains 
 //				gain = getGain(rating);
-                pretest = getPretestLevel(user);
+				if (all == 0)
+					pretest = getPretestLevel(user);
+				else if (all == 1)
+					pretest = "-";
 				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
