@@ -45,7 +45,7 @@ public class Data {
 	private Map<String,Map<String,Map<String,Map<String,Double>>>> conceptLevelMap; //Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
 	private Map<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>> ratingMap;//Map<pretest_level,Map<question,Map<Map<concept,knowledge>,Map<example,List<rating>>>>>
 	private Map<String,List<String>> topicConceptMap;
-	
+	private Map<String,List<Integer>> userMinMaxRatingList; //Map<user,List<min,max>>  keys are users, values are a list of length 2 with the first elem as min rating and second elem as max rating
 	private static Data data = null;
 	
 	private Data() {
@@ -60,7 +60,7 @@ public class Data {
 		return data;
 	}
 	
-	public void setup() {
+	public void setup(String ratingFileName) {
 		df = new DecimalFormat();
 		df.setMaximumFractionDigits(2);
 		
@@ -74,7 +74,7 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
-		fileMeasures = new File(path+"outputMeasures.csv");
+		fileMeasures = new File(path+"outputMeasures_"+ratingFileName);
 		try {
 			if (!fileMeasures.exists())
 				fileMeasures.createNewFile();
@@ -102,10 +102,58 @@ public class Data {
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
 //    	createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
 		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
-		readRatings(path+"ratings.csv");//user,group,datentime,question,example,rating (0,1,2,3)
+		readRatings(path+ratingFileName);//user,group,datentime,question,example,rating (0,1,2,3)
 		readTopicConcept(path+"topicOutcomeConcepts.csv");
+//		readUserMinMaxRating(path+"user_min_max_rating.csv"); 
+		/*I do not use it because normalization has no meaning here with ordinal ratings.
+		E.g. if user rates always 0 or 1. Then normalizing 0 will result in 0 and 1 to 1.
+		 Means when rated 1 it is good because later we want to aggregate judges, we should say first 1/3, is no gain, 1/30-2/3 is gain 1, and 2/3-3/3 is gain 2. should if normalized
+		 score of all users was 1 (assume all of them are users with ratings either 0 or 1, this means that they think it is useful example. It is totally screwing things up
+		 */
 	}
 	
+	private void readUserMinMaxRating(String path) {
+		userMinMaxRatingList = new HashMap<String,List<Integer>>();
+		List<Integer> list;
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String user;
+			int min,max;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				user = clmn[0];
+				min = Integer.parseInt(clmn[1]);
+				max = Integer.parseInt(clmn[2]);
+				list = new ArrayList<Integer>();
+				list.add(min,max);
+				userMinMaxRatingList.put(user, list);
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}			
+		System.out.println("userMinMaxRatingList: "+userMinMaxRatingList.size());		
+	}
+
 	private void readTopicConcept(String path) {
 		topicConceptMap = new HashMap<String,List<String>>();
 		BufferedReader br = null;
@@ -385,7 +433,7 @@ public class Data {
 			String question;
 			String example;
 			int rating;
-			int gain;
+//			int gain;
 			Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>> pretestMap;
 			Map<Map<String,Double>,Map<String,List<Integer>>> questionMap;
 			Map<String,Double> knowledgeMap;
@@ -406,15 +454,14 @@ public class Data {
 				example = clmn[4];
 				rating = Integer.parseInt(clmn[5]);
 				//map ratings to gains 
-				gain = getGain(rating);
-				//replaced std with pretest
-//				pretest = getPretestLevel(user);
-				pretest = user;
+//				gain = getGain(rating);
+                pretest = getPretestLevel(user);
 				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
 					list = new ArrayList<Integer>();
-					list.add(gain);
+//					list.add(gain);
+					list.add(rating);
 					exampleMap = new HashMap<String,List<Integer>>();
 					exampleMap.put(example, list);
 					questionMap = new HashMap<Map<String,Double>,Map<String,List<Integer>>>();
@@ -429,7 +476,8 @@ public class Data {
 					if (pretestMap.containsKey(question) == false)
 					{
 						list = new ArrayList<Integer>();
-						list.add(gain);
+//						list.add(gain);
+						list.add(rating);
 						exampleMap = new HashMap<String,List<Integer>>();
 						exampleMap.put(example, list);
 						questionMap = new HashMap<Map<String,Double>,Map<String,List<Integer>>>();
@@ -441,7 +489,8 @@ public class Data {
 						if (questionMap.containsKey(knowledgeMap) == false)
 						{
 							list = new ArrayList<Integer>();
-							list.add(gain);
+//							list.add(gain);
+							list.add(rating);
 							exampleMap = new HashMap<String,List<Integer>>();
 							exampleMap.put(example, list);
 							questionMap.put(knowledgeMap, exampleMap);
@@ -452,13 +501,15 @@ public class Data {
 							if (exampleMap.containsKey(example) == false)
 							{
 								list = new ArrayList<Integer>();
-								list.add(gain);
+//								list.add(gain);
+								list.add(rating);
 								exampleMap.put(example, list);
 							}
 							else
 							{
 								list = exampleMap.get(example);
-								list.add(gain);
+//								list.add(gain);
+								list.add(rating);
 							}
 						}
 					}
@@ -489,29 +540,7 @@ public class Data {
 	private Map<String, Double> getKnowledgeMap(String user, String group, String datentime) {
 		return conceptLevelMap.get(group).get(user).get(datentime);
 	}
-
-	private int getGain(int rating) {
-		int Nrating = 0;
-		switch (rating)
-        {
-		  case 0:
-			  	Nrating = api.Constants.NOT_HELPFUL_AT_ALL_GAIN; //not helpful at all
-			  	break;
-		  case 1:
-				Nrating = api.Constants.NOT_HELPFUL_GAIN; //not helpful 
-				break;
-		  case 2:
-				Nrating = api.Constants.HELPFUL_GAIN; //helpful 
-				break;
-		  case 3:
-				Nrating = api.Constants.VERY_HELPFUL_GAIN; //very helpful 
-				break;
-		  default: 
-			    break;
-		}		
-		return Nrating;
-	}
-
+	
 	private String getPretestLevel(String user) {
 		String level = "";
 		double pretest = pretestMap.get(user);
@@ -1351,20 +1380,19 @@ public class Data {
 			String difficulty = getDifficulty(question);
 			if (difficulty.equals("null"))
 				System.out.println("null diff");
-			String pretestCat = getPretestLevel(pretest); //TODO: pretest is actually a user now.
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP)+","+pretestCat);
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG)+","+pretestCat);
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure)+","+pretestCat);
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure));
 			bwMeasures.newLine();
 			bwMeasures.flush();
 		    //
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE)+","+pretestCat);
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
 		    bwMeasures.newLine();
 		    bwMeasures.flush();
 		} catch (IOException e) {

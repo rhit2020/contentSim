@@ -14,7 +14,7 @@ import api.Constants.Method;;
 public class ContentSim {
 
 	private static Data db;
-	public static void main(String[] args){
+	public static void calculateSim(String ratingFileName){
 		
 		db = Data.getInstance();
 		// **** for test **** START
@@ -23,7 +23,7 @@ public class ContentSim {
 		// **** for test **** END
 		if (db.isReady())
         {	
-			db.setup();
+			db.setup(ratingFileName);
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;

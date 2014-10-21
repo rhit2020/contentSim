@@ -16,11 +16,11 @@ public class EvaluationSim {
 	private static Data db;
 	
 	
-	public static void main(String[] args){
+	public static void evaluate(String ratingFileName){
 		db = Data.getInstance();
 		if (db.isReady())
         {	
-			db.setup();
+			db.setup(ratingFileName);
 			Set<String> pretestList = db.getPretestCategories();
 			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
 			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>
@@ -135,7 +135,7 @@ public class EvaluationSim {
 	private static double normalizeVoting(double majorityVotingRate) {
 		double min = Double.MAX_VALUE;
 		double max = Double.MIN_VALUE;
-		for (int i : api.Constants.GAINS)
+		for (int i : api.Constants.RATINGS)
 		{
 			if (i < min)
 				min = i;
@@ -212,7 +212,7 @@ public class EvaluationSim {
 	public static int cg(Map<Integer, Map<String, Integer>> subMap) {
 	    int cg = 0;
 		for (int i : subMap.keySet())
-			cg += (Integer) subMap.get(i).values().toArray()[0];
+			cg += getGain((Integer) subMap.get(i).values().toArray()[0]);
 		return cg;
 	}
 
@@ -230,13 +230,14 @@ public class EvaluationSim {
 	private static double getNDCG(
 			Map<Integer, Map<String, Integer>> condensedSysRankMap,
 			Map<Integer, Map<String, Integer>> idealRankMap) {
-		double dg = 0, dgI = 0, gain = 0, gainI = 0,nDCG;
+		double dg = 0, dgI = 0, nDCG;
+		int rate = 0, rateI = 0;
 		for (int rank : condensedSysRankMap.keySet())
 		{
-			gain = (Integer) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
-			gainI = (Integer) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
-			dg += dg(rank,gain);
-			dgI += dg(rank,gainI);
+			rate = (Integer) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			rateI = (Integer) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
+			dg += dg(rank,rate);
+			dgI += dg(rank,rateI);
 		}
 		if (dg == 0.0 && dgI == 0.0) //all docs are not helpful
 			nDCG = 0;
@@ -245,7 +246,8 @@ public class EvaluationSim {
 		return nDCG;
 	}
 
-	private static double dg(int rank, double gain) {
+	private static double dg(int rank, int rate) {
+		int gain = getGain(rate);
 		double dg = 0.0;
 		if (rank <= api.Constants.nDCG_LOG_BASE)
 			dg = gain;
@@ -257,6 +259,28 @@ public class EvaluationSim {
 		return dg;
 	}
 
+	private static int getGain(int rating) {
+		int Nrating = 0;
+		switch (rating)
+        {
+		  case 0:
+			  	Nrating = api.Constants.NOT_HELPFUL_AT_ALL_GAIN; //not helpful at all
+			  	break;
+		  case 1:
+				Nrating = api.Constants.NOT_HELPFUL_GAIN; //not helpful 
+				break;
+		  case 2:
+				Nrating = api.Constants.HELPFUL_GAIN; //helpful 
+				break;
+		  case 3:
+				Nrating = api.Constants.VERY_HELPFUL_GAIN; //very helpful 
+				break;
+		  default: 
+			    break;
+		}		
+		return Nrating;
+	}
+	
 	private static double getAP(Map<Integer, Map<String, Integer>> condensedSysRankMap,int totalRelevantExamples) {
 		double sum = 0;
 		double AP;
