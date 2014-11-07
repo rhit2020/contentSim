@@ -1589,7 +1589,10 @@ public class Data {
 		}
 		double weight = 0.0;
 		for (String concept : subtreeConcepts)
-			weight += conceptMap.get(content).get(concept);	
+		{
+			if (conceptMap.get(content).containsKey(concept))
+			weight += conceptMap.get(content).get(concept);
+		}
 		return weight;
 	}
 	

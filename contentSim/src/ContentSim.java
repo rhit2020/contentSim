@@ -1,6 +1,5 @@
 import headliner.treedistance.ComparisonZhangShasha;
 import headliner.treedistance.CreateTreeHelper;
-import headliner.treedistance.DB;
 import headliner.treedistance.OpsZhangShasha;
 import headliner.treedistance.Transformation;
 import headliner.treedistance.TreeDefinition;
@@ -471,6 +470,11 @@ public class ContentSim {
 		e2qdistMap = new HashMap<String,Double>();
 		qtree = db.getTree(q);
 		etree = db.getTree(e);
+		if (qtree == null | etree == null)
+		{
+			//System.out.println("TREE not available! sim = 0 for "+q+" "+e);
+			return 0;
+		}
 		qsubList = qtree.split("@");
 		esubList = etree.split("@");
 		String tmp = "";
