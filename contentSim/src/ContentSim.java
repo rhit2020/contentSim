@@ -27,6 +27,7 @@ public class ContentSim {
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;
+
 			for (Method method : Method.values())
 			{
 				if (method.isInGroup(Method.Group.STATIC))
