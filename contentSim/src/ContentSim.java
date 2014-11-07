@@ -482,7 +482,7 @@ public class ContentSim {
 			for (String es : esubList)
 			{	
 				temp  = calculateDist(es, qs, e, q);
-				weight = db.getWeightInSubtree(es,q,db);
+				weight = db.getWeightInSubtree(es,q);
 				if (weight <= 0)
 					temp = Double.POSITIVE_INFINITY;
 				else
@@ -506,7 +506,7 @@ public class ContentSim {
 			for (String qs : qsubList)
 			{
 				temp  = calculateDist(es, qs, e, q);
-				weight = db.getWeightInSubtree(qs,e,db);
+				weight = db.getWeightInSubtree(qs,e);
 				if (weight <= 0)
 					temp = Double.POSITIVE_INFINITY;
 				else

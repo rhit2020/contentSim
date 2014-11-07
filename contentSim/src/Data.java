@@ -8,6 +8,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +49,7 @@ public class Data {
 	private Map<String,Map<String,Map<Map<String,Double>,Map<String,List<Integer>>>>> ratingMap;//Map<pretest_level,Map<question,Map<Map<concept,knowledge>,Map<example,List<rating>>>>>
 	private Map<String,List<String>> topicConceptMap;
 	private Map<String,List<Integer>> userMinMaxRatingList; //Map<user,List<min,max>>  keys are users, values are a list of length 2 with the first elem as min rating and second elem as max rating
+	private Map<String,String> contentTreeMap; //Map<content,tree> this is for local similarity using TED approach used in study 
 	private static Data data = null;
 	
 	private Data() {
@@ -110,8 +114,53 @@ public class Data {
 		 Means when rated 1 it is good because later we want to aggregate judges, we should say first 1/3, is no gain, 1/30-2/3 is gain 1, and 2/3-3/3 is gain 2. should if normalized
 		 score of all users was 1 (assume all of them are users with ratings either 0 or 1, this means that they think it is useful example. It is totally screwing things up
 		 */
+		//for the old local similarity based on TED used in lasbtudy
+		readContentTree(path+"tree.csv");
 	}
 	
+	private void readContentConceptTFIDF(String string) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void readContentTree(String path) {
+		contentTreeMap = new HashMap<String,String>();
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String content;
+			String tree;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				content = clmn[0];
+				tree = clmn[1];
+				contentTreeMap.put(content,tree);
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}			
+		System.out.println("contentTreeMap: "+contentTreeMap.size());			
+	}
+
 	private void readUserMinMaxRating(String path) {
 		userMinMaxRatingList = new HashMap<String,List<Integer>>();
 		List<Integer> list;
@@ -1517,6 +1566,31 @@ public class Data {
 			}
 		}
 		return topicList;
+	}
+
+	public String getTree(String content) {
+		return contentTreeMap.get(content);
+	}
+
+	public double getWeightInSubtree(String subtree, String content) {
+		String[] edges = subtree.split(";");
+		ArrayList<String> subtreeConcepts = new ArrayList<String>();
+		String[] temp;
+		for (String edge : edges)
+		{
+			temp = edge.split("-");
+			if (temp[0].equals("ROOT"))
+				subtreeConcepts.add(temp[1]);
+			else 
+			{
+				subtreeConcepts.add(temp[0]);	
+				subtreeConcepts.add(temp[1]);	
+			}
+		}
+		double weight = 0.0;
+		for (String concept : subtreeConcepts)
+			weight += conceptMap.get(content).get(concept);	
+		return weight;
 	}
 	
 }
