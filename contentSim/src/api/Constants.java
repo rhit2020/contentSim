@@ -22,6 +22,7 @@ public class Constants {
 	public static enum Method 
 	{
 		RANDOM_BASELINE (Group.BASELINE) { public String toString(){return "RANDOM::BASELINE";}},
+		NAIVE_LOCAL (Group.STATIC) { public String toString(){return "NAIVE::LOCAL";}},
 		GLOBAL_AS (Group.STATIC) { public String toString(){return "GLOBAL::AS";}},
 		GLOBAL_COS (Group.STATIC){ public String toString(){return "GLOBAL::COS";}}, 
 		LOCAL_AS (Group.STATIC){ public String toString(){return "LOCAL::AS";}}, 

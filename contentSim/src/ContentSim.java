@@ -1,3 +1,10 @@
+import headliner.treedistance.ComparisonZhangShasha;
+import headliner.treedistance.CreateTreeHelper;
+import headliner.treedistance.DB;
+import headliner.treedistance.OpsZhangShasha;
+import headliner.treedistance.Transformation;
+import headliner.treedistance.TreeDefinition;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +41,7 @@ public class ContentSim {
 				{
 					for (String q : qList)
 					{					
-						rankMap = calculateStaticSim(q, eList,method,null);
+						rankMap = calculateSim(q, eList,method,null);
 						for (String e : rankMap.keySet())
 							db.insertContentSim(q, e, rankMap.get(e), method.toString());
 					}
@@ -52,7 +59,7 @@ public class ContentSim {
 	/*
 	 * returns a map, with keys as example and values as the calculated similarity value
 	 */
-	public static HashMap<String, Double> calculateStaticSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
+	public static HashMap<String, Double> calculateSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
 		HashMap<String,Double> rankMap = new HashMap<String,Double>();
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
@@ -84,6 +91,11 @@ public class ContentSim {
 			case RANDOM_BASELINE:
 			{
 				sim = 0.5; // the similarity of random model for each example is same random number 0.5.
+				break;
+			}
+			case NAIVE_LOCAL:
+			{
+				sim = calStructuralContentSim(q, e);
 				break;
 			}
 			//static methods
@@ -439,6 +451,103 @@ public class ContentSim {
 			sim = (2*a-b)/(2*a+b);
 		return sim;
 	}	
+	
+	/*
+	 * old structural similarity used in the labstudy
+	 */
+	private static double calStructuralContentSim(String q, String e) {
+		String[] qsubList;
+		String[] esubList;
+		String qtree;
+		String etree;
+		double temp;
+		double mincost;
+		Map<String, Double> q2edistMap;
+		Map<String, Double> e2qdistMap;
+		double weight = 0.0;
+		double sim;
+		double dist = 0.0;
+		q2edistMap = new HashMap<String,Double>();
+		e2qdistMap = new HashMap<String,Double>();
+		qtree = db.getTree(q);
+		etree = db.getTree(e);
+		qsubList = qtree.split("@");
+		esubList = etree.split("@");
+		String tmp = "";
+
+		//find distance of q to e
+		for (String qs : qsubList)
+		{
+			mincost = Double.POSITIVE_INFINITY;
+			for (String es : esubList)
+			{	
+				temp  = calculateDist(es, qs, e, q);
+				weight = db.getWeightInSubtree(es,q,db);
+				if (weight <= 0)
+					temp = Double.POSITIVE_INFINITY;
+				else
+					temp = temp/weight;
+				if (temp < mincost)
+				{
+					mincost = temp;
+					tmp = es;
+				}
+			}
+			q2edistMap.put(qs, mincost);
+//			System.out.println("qs: "+qs);
+//			System.out.println("es: "+tmp);
+//			System.out.println("mincost: "+mincost);
+//			System.out.println("******************");
+		}
+		//find distance of e to q
+		for (String es : esubList)
+		{
+			mincost = Double.POSITIVE_INFINITY;
+			for (String qs : qsubList)
+			{
+				temp  = calculateDist(es, qs, e, q);
+				weight = db.getWeightInSubtree(qs,e,db);
+				if (weight <= 0)
+					temp = Double.POSITIVE_INFINITY;
+				else
+					temp = temp/weight;
+				if (temp < mincost)
+				{
+					mincost = temp;
+					tmp = qs;
+				}
+			}
+			e2qdistMap.put(es, mincost);
+//			System.out.println("es: "+es);
+//			System.out.println("qs: "+tmp);
+//			System.out.println("mincost: "+mincost);
+//			System.out.println("******************");
+		}
+
+		for (Map.Entry<String, Double> entry : q2edistMap.entrySet())
+		{
+			dist += entry.getValue();
+		}
+		for (Map.Entry<String, Double> entry : e2qdistMap.entrySet())
+		{
+			dist += entry.getValue();
+		}
+
+		sim = 1.0/(Math.exp(0.01*dist));
+		return sim;
+	}
+	
+	
+	
+	private static double calculateDist(String es, String qs,String e, String q) {
+		TreeDefinition eTree = CreateTreeHelper.makeTree(es);
+		TreeDefinition qTree = CreateTreeHelper.makeTree(qs);
+		ComparisonZhangShasha treeCorrector = new ComparisonZhangShasha();
+		OpsZhangShasha costs = new OpsZhangShasha();
+		Transformation transform = treeCorrector.findDistance(eTree, qTree, costs);
+		double dist = transform.getCost();		
+		return dist;
+	}
 
 	private static <T> Set<T> union(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>(setA);

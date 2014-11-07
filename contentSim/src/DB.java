@@ -1,4 +1,6 @@
 
+import headliner.treedistance.DB;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -240,4 +242,66 @@ public class DB {
 		}			
 		return endLines;	
 	}
+	
+	public String getTree(String c) {
+        PreparedStatement ps = null;
+		String sqlCommand = "";
+		ResultSet rs = null;
+		String tree = "";
+		
+		try {
+			sqlCommand = "SELECT tree  FROM ent_content_tree where content_name = '"+c+"'";
+			ps = labstudyConn.prepareStatement(sqlCommand);
+			rs = ps.executeQuery();
+			while (rs.next())
+				 tree = rs.getString(1);
+			rs.close();
+			ps.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+			
+		return tree;
+	}
+	
+	public double getWeightInSubtree(String subtree, String content, DB db) {
+
+		String[] edges = subtree.split(";");
+		ArrayList<String> subtreeConcepts = new ArrayList<String>();
+		String[] temp;
+		for (String edge : edges)
+		{
+			temp = edge.split("-");
+			if (temp[0].equals("ROOT"))
+				subtreeConcepts.add(temp[1]);
+			else 
+			{
+				subtreeConcepts.add(temp[0]);	
+				subtreeConcepts.add(temp[1]);	
+			}
+		}
+		String concepts = ""; 
+		for (int i = 0; i < subtreeConcepts.size(); i++)
+		{
+			concepts += "'"+subtreeConcepts.get(i)+"'";
+			if (i < subtreeConcepts.size() - 1)
+				concepts += ",";
+		}
+		double weight = 0.0;
+		try
+		{				
+			String sqlCommand = "SELECT `tfidf` FROM temp2_ent_jcontent_tfidf where title = '"+content+"' and concept in ("+concepts+");";
+			PreparedStatement ps = labstudyConn.prepareStatement(sqlCommand);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next())
+				weight += rs.getDouble(1);
+			rs.close();
+			ps.close();
+		}catch (SQLException e) {
+			 e.printStackTrace();
+		}
+			
+		return weight;
+	}
+
 }

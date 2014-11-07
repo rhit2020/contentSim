@@ -47,7 +47,7 @@ public class EvaluationSim {
 					{
 						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE))
 						{
-							simMap = ContentSim.calculateStaticSim(question,exampleList,method,null);
+							simMap = ContentSim.calculateSim(question,exampleList,method,null);
 							//sorting the simMap
 							tmp = new HashMap<String,Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -70,7 +70,7 @@ public class EvaluationSim {
 							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
 							for (Map<String,Double> kmap : conceptLevelMap)
 							{
-								simMap = ContentSim.calculateStaticSim(question,exampleList,method,kmap);
+								simMap = ContentSim.calculateSim(question,exampleList,method,kmap);
 								//sorting the simMap
 								tmp = new HashMap<String,Double>();
 								vc = new ValueComparatorDouble(tmp);
