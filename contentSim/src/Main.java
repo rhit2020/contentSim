@@ -5,9 +5,9 @@ public class Main {
 		int all = 0;
 		String all_rating = "ratings.csv";
 		String outlier_rem_rating = "ratings.outlier.removed.csv";
-		EvaluationSim.evaluate(all_rating,all);
-		EvaluationSim.evaluate(outlier_rem_rating,all);	
-//		ContentSim cs = new ContentSim();
-//		cs.calculateSim("");		
+//		EvaluationSim.evaluate(all_rating,all);
+//		EvaluationSim.evaluate(outlier_rem_rating,all);	
+		ContentSim cs = new ContentSim();
+		cs.calculateSim("");		
 	}
 }

@@ -50,6 +50,7 @@ public class Data {
 	private Map<String,List<String>> topicConceptMap;
 	private Map<String,List<Integer>> userMinMaxRatingList; //Map<user,List<min,max>>  keys are users, values are a list of length 2 with the first elem as min rating and second elem as max rating
 	private Map<String,String> contentTreeMap; //Map<content,tree> this is for local similarity using TED approach used in study 
+	private Map<String,String> rdfTitleMap; //Map<rdfid,title>
 	private static Data data = null;
 	
 	private Data() {
@@ -116,8 +117,47 @@ public class Data {
 		 */
 		//for the old local similarity based on TED used in lasbtudy
 		readContentTree(path+"tree.csv");
+		readRdfTitle(path+"rdfid_title.csv");
 	}
 	
+	private void readRdfTitle(String path) {
+		rdfTitleMap = new HashMap<String,String>();
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String title;
+			String rdfid;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				rdfid =clmn[0];	
+				title = clmn[1];
+				rdfTitleMap.put(rdfid,title);
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}		
+		System.out.println("rdfTitleMap:"+rdfTitleMap.size());		
+	}
+
 	private void readContentConceptTFIDF(String string) {
 		// TODO Auto-generated method stub
 		
@@ -1233,7 +1273,7 @@ public class Data {
 	
 	public void insertContentSim(String question, String example, double sim, String method) {
 		try {
-			bwSim.write(question+"\t"+example+"\t"+sim+"\t"+method);
+			bwSim.write(question+"\t"+example+"\t"+sim+"\t"+method+"\t"+rdfTitleMap.get(question));
 			bwSim.newLine();
 		    bwSim.flush();
 		} catch (IOException e) {
