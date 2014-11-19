@@ -8,6 +8,7 @@ public class Main {
 //		EvaluationSim.evaluate(all_rating,all);
 //		EvaluationSim.evaluate(outlier_rem_rating,all);	
 		ContentSim cs = new ContentSim();
-		cs.calculateSim("");		
+		String[] contentversion = {"pp","s14","f14"};
+		cs.calculateSim("",contentversion[0]);		
 	}
 }

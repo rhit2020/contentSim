@@ -65,12 +65,17 @@ public class Data {
 		return data;
 	}
 	
-	public void setup(String ratingFileName, int all) {
+	/*
+	 * contentversion is mainly used for the contentSim for getting static methods similarity over different times.
+	 * for the purpose of my prelim evaluation I use the "" which are the f14 version (after adding new contents, and also changing existing one)
+	 * note that content files for f14 has no prefix, e.g. content_start_end or block_end_line 
+	 */
+	public void setup(String ratingFileName, int all, String contentversion) {
 		df = new DecimalFormat();
 		df.setMaximumFractionDigits(2);
 		
 		String path = "./resources/";		
-		fileSim = new File(path+"outputSim.txt");
+		fileSim = new File(path+(contentversion==""?"":contentversion+"_")+"outputSim.txt");
 		try {
 			if (!fileSim.exists())
 				fileSim.createNewFile();
@@ -97,11 +102,11 @@ public class Data {
 //		} catch (IOException e) {
 //				e.printStackTrace();
 //		}		
-		readContentData(path+"content.csv");
-		readConceptData(path+"content_concept.csv");
-		readStartEndlineData(path+"content_start_end.csv");
-		readBlockEndLine(path+"block_end_line.csv");
-		readAdjacentConcept(path+"adjacent_concept.csv");
+		readContentData(path+(contentversion==""?"":contentversion+"_")+"content.csv");
+		readConceptData(path+(contentversion==""?"":contentversion+"_")+"content_concept.csv");
+		readStartEndlineData(path+(contentversion==""?"":contentversion+"_")+"content_start_end.csv");
+		readBlockEndLine(path+(contentversion==""?"":contentversion+"_")+"block_end_line.csv");
+		readAdjacentConcept(path+(contentversion==""?"":contentversion+"_")+"adjacent_concept.csv");
 		readDifficulty(path+"difficulty.csv"); //content,difficulty
 		readTopic(path+"topic.csv");//content, topic
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
@@ -116,7 +121,7 @@ public class Data {
 		 score of all users was 1 (assume all of them are users with ratings either 0 or 1, this means that they think it is useful example. It is totally screwing things up
 		 */
 		//for the old local similarity based on TED used in lasbtudy
-		readContentTree(path+"tree.csv");
+		readContentTree(path+(contentversion==""?"":contentversion+"_")+"tree.csv");
 		readRdfTitle(path+"rdfid_title.csv");
 	}
 	
@@ -182,8 +187,16 @@ public class Data {
 				}
 				clmn = line.split(cvsSplitBy);
 				content = clmn[0];
-				tree = clmn[1];
-				contentTreeMap.put(content,tree);
+				if (clmn.length == 1)
+				{
+					System.out.println("No tree for content: "+content);
+					continue;
+				}
+				else
+				{
+					tree = clmn[1];
+					contentTreeMap.put(content,tree);
+				}
 			}	 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -1257,11 +1270,12 @@ public class Data {
 	//String sqlCommand = "select distinct concept from rel_content_concept where title ='"+content+"';";
 	public List<String> getConcepts(String content) {
 		Map<String,Double> weightMap = conceptMap.get(content);
-		if (weightMap==null)
-			System.out.println(content);
 		List<String> conceptList = new ArrayList<String>();
-		for (String c : weightMap.keySet())
-			conceptList.add(c);
+		if (weightMap!=null)		
+		{
+			for (String c : weightMap.keySet())
+				conceptList.add(c);
+		}	
 		return conceptList;	
 	}
 	

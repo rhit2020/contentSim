@@ -20,7 +20,7 @@ public class EvaluationSim {
 		db = Data.getInstance();
 		if (db.isReady())
         {	
-			db.setup(ratingFileName,all);
+			db.setup(ratingFileName,all,""); 
 			Set<String> pretestList = db.getPretestCategories();
 			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
 			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>

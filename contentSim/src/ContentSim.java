@@ -19,8 +19,9 @@ import api.Constants.Method;;
 
 public class ContentSim {
 
+	static List<String>  contentNotInStartEndLineFile = new ArrayList<String>();
 	private static Data db;
-	public static void calculateSim(String ratingFileName){
+	public static void calculateSim(String ratingFileName, String contentversion){
 		
 		db = Data.getInstance();
 		// **** for test **** START
@@ -29,7 +30,7 @@ public class ContentSim {
 		// **** for test **** END
 		if (db.isReady())
         {	
-			db.setup(ratingFileName,0);
+			db.setup(ratingFileName,0,contentversion);
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;
@@ -52,6 +53,7 @@ public class ContentSim {
 		{
 			System.out.println("System is not ready!");
 		}
+		System.out.println("Finished! #contentNotInStartEndLineFile:"+contentNotInStartEndLineFile.size());
 		db.close();
 	}
 
@@ -171,29 +173,37 @@ public class ContentSim {
 	private static List<ArrayList<String>> getSubtrees(String content) {
 		List<ArrayList<String>> subtreeList = new ArrayList<ArrayList<String>>();
 		List<Integer> lines = db.getStartEndLine(content);
-		int start = lines.get(0);
-		int end = lines.get(1);
-		ArrayList<String> subtree = null;
-		List<String> adjucentConceptsList = null;
-		for (int line = start; line <= end; line++)
+		if(lines == null)
 		{
-			//create subtree for concepts that are in the current line
-			subtree = db.getConceptsInSameLine(content, line);
-			if (updateSubtreeList(subtree,subtreeList) == true)
-				subtreeList.add(subtree);	
-			List<Integer> endLines = db.getEndLineBlock(content,line); //in case that line has a concept that has an end line different than the start line, endlines would be nonempty			
-			for (int e : endLines)
+			if (contentNotInStartEndLineFile.contains(content)==false)
+				contentNotInStartEndLineFile.add(content);			
+		}
+		else
+		{
+			int start = lines.get(0);
+			int end = lines.get(1);
+			ArrayList<String> subtree = null;
+			List<String> adjucentConceptsList = null;
+			for (int line = start; line <= end; line++)
 			{
-				//create subtree for the block
-				subtree = new ArrayList<String>();
-				adjucentConceptsList = db.getAdjacentConcept(content,line,e);
-				Collections.sort(adjucentConceptsList, new SortByName());
-				for (String adjcon : adjucentConceptsList)
-					subtree.add(adjcon);				
+				//create subtree for concepts that are in the current line
+				subtree = db.getConceptsInSameLine(content, line);
 				if (updateSubtreeList(subtree,subtreeList) == true)
 					subtreeList.add(subtree);	
-			}			
-		}	
+				List<Integer> endLines = db.getEndLineBlock(content,line); //in case that line has a concept that has an end line different than the start line, endlines would be nonempty			
+				for (int e : endLines)
+				{
+					//create subtree for the block
+					subtree = new ArrayList<String>();
+					adjucentConceptsList = db.getAdjacentConcept(content,line,e);
+					Collections.sort(adjucentConceptsList, new SortByName());
+					for (String adjcon : adjucentConceptsList)
+						subtree.add(adjcon);				
+					if (updateSubtreeList(subtree,subtreeList) == true)
+						subtreeList.add(subtree);	
+				}			
+			}
+		}			
 		return subtreeList;
 	}	
 
