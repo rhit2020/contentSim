@@ -37,7 +37,8 @@ public class ContentSim {
 
 			for (Method method : Method.values())
 			{
-				if (method.isInGroup(Method.Group.STATIC))
+				if (method.isInGroup(Method.Group.STATIC) |
+					method.isInGroup(Method.Group.BASELINE))
 				{
 					for (String q : qList)
 					{					

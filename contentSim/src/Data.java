@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,9 +38,9 @@ public class Data {
 	private Map<String,List<Integer>> startEndLineMap = null; //keys are contents, values: list[0]:start line; list[1]:end line
 	private Map<String,Map<Integer,List<Integer>>> blockEndLineMap = null; //keys are contents, values: a map with key:start line and list of end lines of the concept in that start line
 	private Map<String,Map<Integer,Map<Integer,List<String>>>> adjacentConceptMap = null; //keys are contents, values: a map with key:start line and a map as value(key:end line, value, List of concepts in that start and end line)
-	private File fileSim,fileConceptLevels,fileMeasures; //output file where similarity results are stored
-	private FileWriter fwSim,fwConceptLevels,fwMeasures;
-	private BufferedWriter bwSim,bwConceptLevels,bwMeasures;	
+	private File fileSim,fileConceptLevels,fileMeasures,fileRankedExample; //output file where similarity results are stored
+	private FileWriter fwSim,fwConceptLevels,fwMeasures,fwRankedExample;
+	private BufferedWriter bwSim,bwConceptLevels,bwMeasures,bwRankedExample;	
 	private DecimalFormat df;	
     //maps for using in the evaluation process
 	private Map<String,String> difficultyMap; //content_name,difficulty
@@ -93,6 +94,16 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}	
+		
+		fileRankedExample = new File(path+"outputRankedExample_"+all+"_"+ratingFileName);
+		try {
+			if (!fileRankedExample.exists())
+				fileRankedExample.createNewFile();
+			fwRankedExample = new FileWriter(fileRankedExample.getAbsoluteFile());
+			bwRankedExample = new BufferedWriter(fwRankedExample);
+		} catch (IOException e) {
+				e.printStackTrace();
+		}
 //		fileConceptLevels = new File(path+"outputConceptLevels.csv");
 //		try {
 //			if (!fileConceptLevels.exists())
@@ -561,6 +572,8 @@ public class Data {
 					pretest = getPretestLevel(user);
 				else if (all == 1)
 					pretest = "-";
+				else if (all == -1)//means treat pretest as user, number of pretest will be the same as users
+					pretest = ""+user;
 				knowledgeMap = getKnowledgeMap(user,group,datentime);
 				if (ratingMap.containsKey(pretest) == false)
 				{
@@ -1648,6 +1661,28 @@ public class Data {
 			weight += conceptMap.get(content).get(concept);
 		}
 		return weight;
+	}
+
+	public void writeRankedExample(String question, String pretest, Method method,ArrayList<String> orderedList) {
+		try {
+			String topicText = getTopicText(question);
+			String difficulty = getDifficulty(question);
+			if (difficulty.equals("null"))
+				System.out.println("null diff");
+			String rankedExampleTxt = "";
+			for (String example : orderedList)
+			{
+				rankedExampleTxt += example + "@";
+			}
+			if (orderedList.isEmpty() == false)
+				rankedExampleTxt = rankedExampleTxt.substring(0,rankedExampleTxt.length()-1); //ignoring the last comma
+			bwRankedExample.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+rankedExampleTxt);
+			bwRankedExample.newLine();
+			bwRankedExample.flush();			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 	}
 	
 }

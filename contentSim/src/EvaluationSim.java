@@ -54,6 +54,7 @@ public class EvaluationSim {
 							sortedTreeMap = new TreeMap<String,Double>(vc);		
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
+							db.writeRankedExample(question, pretest, method, new ArrayList<String>(sortedTreeMap.keySet()));
 							//sortedTreeMap.keySet()  preserves the order
 							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
@@ -77,6 +78,7 @@ public class EvaluationSim {
 								sortedTreeMap = new TreeMap<String,Double>(vc);		
 								tmp.putAll(simMap);
 								sortedTreeMap.putAll(tmp);
+								db.writeRankedExample(question, pretest, method, new ArrayList<String>(sortedTreeMap.keySet()));
 								//sortedTreeMap.keySet()  preserves the order
 								condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 								condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
