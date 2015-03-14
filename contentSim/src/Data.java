@@ -1488,6 +1488,10 @@ public class Data {
 	public Set<Map<String, Double>> getKnowledgeLevels(String pretest,String question) {
 		return ratingMap.get(pretest).get(question).keySet();
 	}
+	
+	public Map<String, Double> getConceptLevelAtTime(String group, String user,String datentime) {
+		return conceptLevelMap.get(group).get(user).get(datentime);
+	}
 
 	public Set<String> getPretestCategories() {
 		return ratingMap.keySet();
@@ -1683,6 +1687,5 @@ public class Data {
 			e.printStackTrace();
 		}
 		
-	}
-	
+	}	
 }

@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,6 +17,74 @@ import api.Constants.Method;
 public class EvaluationSim {
 
 	private static Data db;
+	
+	public static void getInputCorrelationAnalysis(String ratingFileName, int all)
+	{
+		db = Data.getInstance();
+		if (db.isReady())
+        {
+			db.setup(ratingFileName, all, "");
+
+			BufferedReader br = null;
+			String line = "";
+			String cvsSplitBy = ",";
+			boolean isHeader = true;
+			try {
+				br = new BufferedReader(new FileReader("./resources/"+ ratingFileName));
+				String[] clmn;
+				String user;
+				String group;
+				String datentime;
+				String question;
+				Map<String, Double> simMap;
+				Map<String, Double> tmp;
+				ValueComparatorDouble vc;
+				TreeMap<String, Double> sortedTreeMap;
+				String[] exampleList = db.getExamples();
+				Map<String, Double> conceptLevelMap;
+				while ((line = br.readLine()) != null) {
+					if (isHeader) {
+						isHeader = false;
+						continue;
+					}
+					clmn = line.split(cvsSplitBy);
+					user = clmn[0];
+					group = clmn[1];
+					datentime = clmn[2];
+					question = clmn[3];
+					for (Method method : Method.values()) {
+						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE)) {
+							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							// sorting the simMap
+							tmp = new HashMap<String, Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String, Double>(vc);
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							db.writeRankedExample(question,"",method,new ArrayList<String>(sortedTreeMap.keySet()));
+						} else if (method.isInGroup(Method.Group.PERSONALZIED)) {
+							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
+							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap);
+							// sorting the simMap
+							tmp = new HashMap<String, Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String, Double>(vc);
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							db.writeRankedExample(question,"",method,new ArrayList<String>(sortedTreeMap.keySet()));
+						}
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			System.out.println("System is not ready!");
+		}
+		db.close();
+	}
 	
 	
 	public static void evaluate(String ratingFileName, int all){
@@ -54,7 +125,6 @@ public class EvaluationSim {
 							sortedTreeMap = new TreeMap<String,Double>(vc);		
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
-							db.writeRankedExample(question, pretest, method, new ArrayList<String>(sortedTreeMap.keySet()));
 							//sortedTreeMap.keySet()  preserves the order
 							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
@@ -78,7 +148,6 @@ public class EvaluationSim {
 								sortedTreeMap = new TreeMap<String,Double>(vc);		
 								tmp.putAll(simMap);
 								sortedTreeMap.putAll(tmp);
-								db.writeRankedExample(question, pretest, method, new ArrayList<String>(sortedTreeMap.keySet()));
 								//sortedTreeMap.keySet()  preserves the order
 								condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 								condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
