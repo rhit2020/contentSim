@@ -29,7 +29,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import api.Constants;
 import api.Constants.Method;
+import api.Constants.Method.Group;
 
 public class Data {
 	
@@ -38,9 +40,9 @@ public class Data {
 	private Map<String,List<Integer>> startEndLineMap = null; //keys are contents, values: list[0]:start line; list[1]:end line
 	private Map<String,Map<Integer,List<Integer>>> blockEndLineMap = null; //keys are contents, values: a map with key:start line and list of end lines of the concept in that start line
 	private Map<String,Map<Integer,Map<Integer,List<String>>>> adjacentConceptMap = null; //keys are contents, values: a map with key:start line and a map as value(key:end line, value, List of concepts in that start and end line)
-	private File fileSim,fileConceptLevels,fileMeasures,fileRankedExample; //output file where similarity results are stored
-	private FileWriter fwSim,fwConceptLevels,fwMeasures,fwRankedExample;
-	private BufferedWriter bwSim,bwConceptLevels,bwMeasures,bwRankedExample;	
+	private File fileSim,fileConceptLevels,fileMeasures,fileRankedExample,fileLearning; //output file where similarity results are stored
+	private FileWriter fwSim,fwConceptLevels,fwMeasures,fwRankedExample,fwLearning;
+	private BufferedWriter bwSim,bwConceptLevels,bwMeasures,bwRankedExample,bwLearning;	
 	private DecimalFormat df;	
     //maps for using in the evaluation process
 	private Map<String,String> difficultyMap; //content_name,difficulty
@@ -51,7 +53,9 @@ public class Data {
 	private Map<String,List<String>> topicConceptMap;
 	private Map<String,List<Integer>> userMinMaxRatingList; //Map<user,List<min,max>>  keys are users, values are a list of length 2 with the first elem as min rating and second elem as max rating
 	private Map<String,String> contentTreeMap; //Map<content,tree> this is for local similarity using TED approach used in study 
-	private Map<String,String> rdfTitleMap; //Map<rdfid,title>
+	private Map<String,String> titleRdfMap; //Map<title,rdf>
+	private ArrayList<String> validContents; //list<title>
+
 	private static Data data = null;
 	
 	private Data() {
@@ -71,12 +75,12 @@ public class Data {
 	 * for the purpose of my prelim evaluation I use the "" which are the f14 version (after adding new contents, and also changing existing one)
 	 * note that content files for f14 has no prefix, e.g. content_start_end or block_end_line 
 	 */
-	public void setup(String ratingFileName, int all, String contentversion) {
+	public void setup(String domain, String ratingFileName, int all, String contentversion) {
 		df = new DecimalFormat();
 		df.setMaximumFractionDigits(2);
 		
 		String path = "./resources/";		
-		fileSim = new File(path+(contentversion==""?"":contentversion+"_")+"outputSim.txt");
+		fileSim = new File(path+"_"+domain+"_"+(contentversion==""?"":contentversion+"_")+"outputSim.txt");
 		try {
 			if (!fileSim.exists())
 				fileSim.createNewFile();
@@ -104,6 +108,16 @@ public class Data {
 		} catch (IOException e) {
 				e.printStackTrace();
 		}
+		
+		fileLearning = new File(path+"outputLearning_"+all+"_"+ratingFileName);
+		try {
+			if (!fileLearning.exists())
+				fileLearning.createNewFile();
+			fwLearning = new FileWriter(fileLearning.getAbsoluteFile());
+			bwLearning = new BufferedWriter(fwLearning);
+		} catch (IOException e) {
+				e.printStackTrace();
+		}
 //		fileConceptLevels = new File(path+"outputConceptLevels.csv");
 //		try {
 //			if (!fileConceptLevels.exists())
@@ -113,16 +127,16 @@ public class Data {
 //		} catch (IOException e) {
 //				e.printStackTrace();
 //		}		
-		readContentData(path+(contentversion==""?"":contentversion+"_")+"content.csv");
-		readConceptData(path+(contentversion==""?"":contentversion+"_")+"content_concept.csv");
+		readContentData(path+(contentversion==""?"":contentversion+"_")+(domain.equals("")?"":domain+"_")+"content.csv");
+		readConceptData(path+(contentversion==""?"":contentversion+"_")+(domain.equals("")?"":domain+"_")+"content_concept.csv");
 		readStartEndlineData(path+(contentversion==""?"":contentversion+"_")+"content_start_end.csv");
 		readBlockEndLine(path+(contentversion==""?"":contentversion+"_")+"block_end_line.csv");
 		readAdjacentConcept(path+(contentversion==""?"":contentversion+"_")+"adjacent_concept.csv");
 		readDifficulty(path+"difficulty.csv"); //content,difficulty
-		readTopic(path+"topic.csv");//content, topic
+		readTopic(path+(domain.equals("")?"":domain+"_")+"topic.csv");//content, topic
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
 //    	createConceptLevelFile(path+"ratings.csv"); //create the conceptLevel file
-		readConceptLevels(path+"outputConceptLevels.csv");//group,user,datentime,concept,knowledge
+		readConceptLevels(path+(ratingFileName.equals("summary_qe.csv")?"learning_outputConceptLevels.csv":"outputConceptLevels.csv"));//group,user,datentime,concept,knowledge
 		readRatings(path+ratingFileName,all);//user,group,datentime,question,example,rating (0,1,2,3)
 		readTopicConcept(path+"topicOutcomeConcepts.csv");
 //		readUserMinMaxRating(path+"user_min_max_rating.csv"); 
@@ -133,11 +147,57 @@ public class Data {
 		 */
 		//for the old local similarity based on TED used in lasbtudy
 		readContentTree(path+(contentversion==""?"":contentversion+"_")+"tree.csv");
-		readRdfTitle(path+"rdfid_title.csv");
+		readTitleRdf(path+"title_rdfid.csv");
+		
+		//filtering useless contents
+		readValidContents(path+"validContents.csv");
+
 	}
 	
-	private void readRdfTitle(String path) {
-		rdfTitleMap = new HashMap<String,String>();
+	private void readValidContents(String path) {
+		// TODO Auto-generated method stub
+		validContents = new ArrayList<String>();
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		boolean isHeader = true;
+		try {
+			br = new BufferedReader(new FileReader(path));
+			String[] clmn;
+			String title;
+			while ((line = br.readLine()) != null) {
+				if (isHeader)
+				{
+					isHeader = false;
+					continue;
+				}
+				clmn = line.split(cvsSplitBy);
+				title = clmn[0];
+				validContents.add(title);
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}	
+		List<String> tmp = new ArrayList<String>();
+		for (String r : titleRdfMap.keySet())
+			if (validContents.contains(titleRdfMap.get(r)))
+				tmp.add(r);
+		validContents.addAll(tmp);
+		System.out.println("validContents:"+validContents.size());		
+	}
+
+	private void readTitleRdf(String path) {
+		titleRdfMap = new HashMap<String,String>();
 		BufferedReader br = null;
 		String line = "";
 		String cvsSplitBy = ",";
@@ -154,9 +214,9 @@ public class Data {
 					continue;
 				}
 				clmn = line.split(cvsSplitBy);
-				rdfid =clmn[0];	
-				title = clmn[1];
-				rdfTitleMap.put(rdfid,title);
+				title = clmn[0];
+				rdfid =clmn[1];	
+				titleRdfMap.put(title,rdfid);
 			}	 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -171,7 +231,7 @@ public class Data {
 				}
 			}
 		}		
-		System.out.println("rdfTitleMap:"+rdfTitleMap.size());		
+		System.out.println("titleRdfMap:"+titleRdfMap.size());		
 	}
 
 	private void readContentConceptTFIDF(String string) {
@@ -462,6 +522,7 @@ public class Data {
 					isHeader = false;
 					continue;
 				}
+				
 				clmn = line.split(cvsSplitBy);
 				group = clmn[0];
 				user = clmn[1];
@@ -661,6 +722,8 @@ public class Data {
 	
 	private String getPretestLevel(String user) {
 		String level = "";
+		if (pretestMap.get(user) == null)
+			return null;
 		double pretest = pretestMap.get(user);
 //		if( pretest < api.Constants.Pretest.AVE_MIN)
 //			level = "Low";
@@ -1276,13 +1339,41 @@ public class Data {
 	
 	//String sqlCommand = "SELECT distinct content_name FROM ent_content where content_type = 'example' and domain = 'java' order by content_name;";
 	public String[] getExamples() {
-		List<String> list = contentMap.get("example");			
+		List<String> list = contentMap.get("example");
+		List<String> list2 = contentMap.get("animated_example");	
+		if (list2 != null) list.addAll(list2);
+		list = filterAvailableContents(list);
 		return list.toArray(new String[list.size()]);
 	}
 	
+	private List<String> filterAvailableContents(List<String> list) {
+		ArrayList<String> invalid = new ArrayList<String>();
+		for (String s : list)
+			if (validContents.contains(s) == false)
+				invalid.add(s);
+		list.removeAll(invalid);
+		List<String> contentWithNoConcept = new ArrayList<String>();
+		for (String l : list){
+			if (conceptMap.get(l)==null)
+				if (conceptMap.get(titleRdfMap.get(l))==null)
+				      contentWithNoConcept.add(l);
+		}
+		list.removeAll(contentWithNoConcept);
+		if (contentWithNoConcept.size()>0)
+		{
+	        System.out.println("contents with no concepts: "+contentWithNoConcept.size());
+	        for (String s : contentWithNoConcept)
+	        	System.out.print(s+",");
+	        System.out.println();
+		}
+		return  list;
+	}
+
 	//String sqlCommand = "select distinct concept from rel_content_concept where title ='"+content+"';";
 	public List<String> getConcepts(String content) {
 		Map<String,Double> weightMap = conceptMap.get(content);
+		if (weightMap == null)
+			weightMap = conceptMap.get(titleRdfMap.get(content));
 		List<String> conceptList = new ArrayList<String>();
 		if (weightMap!=null)		
 		{
@@ -1295,12 +1386,13 @@ public class Data {
 	//String sqlCommand = "SELECT distinct content_name FROM ent_content where content_type = 'question' and domain = 'java' order by content_name;";
 	public String[] getQuestions() {
 		List<String> list = contentMap.get("question");	
+		list = filterAvailableContents(list);
 		return list.toArray(new String[list.size()]);
 	}
 	
 	public void insertContentSim(String question, String example, double sim, String method) {
 		try {
-			bwSim.write(question+"\t"+example+"\t"+sim+"\t"+method+"\t"+rdfTitleMap.get(question));
+			bwSim.write(question+"\t"+example+"\t"+sim+"\t"+method+"\t"+titleRdfMap.get(question));
 			bwSim.newLine();
 		    bwSim.flush();
 		} catch (IOException e) {
@@ -1311,14 +1403,18 @@ public class Data {
 	
 	//String sqlCommand = "SELECT distinct concept,`tfidf` FROM temp2_ent_jcontent_tfidf where title = '" + content + "';";
 	public Map<String,Double> getTFIDF(String content) {
-		Map<String,Double> weightMap = conceptMap.get(content);		
+		Map<String,Double> weightMap = conceptMap.get(content);	
+		if (weightMap == null)
+			weightMap = conceptMap.get(titleRdfMap.get(content));
 		return weightMap;
 	}	
 
 	//String sqlCommand = "select distinct concept from rel_content_concept where title ='"+content+"' and sline >= "+sLine+" and eline <= "+eline+";" ;
 	public List<String> getAdjacentConcept(String content, int sline,int eline) {
 		List<String> conceptList = new ArrayList<String>();
-		Map<Integer,Map<Integer,List<String>>> map = adjacentConceptMap.get(content);	
+		Map<Integer,Map<Integer,List<String>>> map = adjacentConceptMap.get(content);
+		if (map == null)
+			map = adjacentConceptMap.get(titleRdfMap.get(content));
 		Map<Integer,List<String>> elineMap;
 		List<String> concepts;
 		for (Integer s : map.keySet())
@@ -1344,6 +1440,8 @@ public class Data {
 	public ArrayList<String> getConceptsInSameLine(String content, int sline) {
 		ArrayList<String> conceptList = new ArrayList<String>();
 		Map<Integer,Map<Integer,List<String>>> map = adjacentConceptMap.get(content);	
+		if (map == null)
+			map = adjacentConceptMap.get(titleRdfMap.get(content));
 		Map<Integer, List<String>> elineMap;
 		for (Integer s : map.keySet())
 		{
@@ -1364,6 +1462,8 @@ public class Data {
 	//String sqlCommand = "select min(sline),max(eline) from rel_content_concept where title ='"+content+"';";
 	public List<Integer> getStartEndLine(String content) {
 		List<Integer> lines = startEndLineMap.get(content);
+		if (lines == null)
+			lines = startEndLineMap.get(titleRdfMap.get(content));
 		return lines;
 	}
     
@@ -1371,6 +1471,8 @@ public class Data {
 	public List<Integer> getEndLineBlock(String content, int sline) {
         List<Integer> endLines = new ArrayList<Integer>();
 		Map<Integer,List<Integer>> map = blockEndLineMap.get(content);
+		if (map == null)
+			map = blockEndLineMap.get(titleRdfMap.get(content));
 		List<Integer> tmp = map.get(sline);
         if (tmp != null)
         {
@@ -1382,26 +1484,36 @@ public class Data {
 	}	
 	
 	public String getDifficulty(String content){
-		return difficultyMap.get(content);
+		String diff = difficultyMap.get(content);
+		if (diff == null)
+			diff =  difficultyMap.get(titleRdfMap.get(content));
+		return diff;
 	}
 	
 	public List<String> getTopic(String content){
-		return topicQuestionMap.get(content);
+		if (topicQuestionMap.get(content) != null)
+			return topicQuestionMap.get(content);
+		else
+			return topicQuestionMap.get(titleRdfMap.get(content));
 	}
 	
 	public String getTopicText(String content){
 		String topics = "";
-		if (topicQuestionMap.get(content).size() == 1)
+		List<String> list = topicQuestionMap.get(content);
+		if (list == null)
+			list = topicQuestionMap.get(titleRdfMap.get(content));
+		if (list.size() == 1)
 		{
-			topics = topicQuestionMap.get(content).get(0);
+			topics = list.get(0);
 		}
 		else
 		{
-			for (String t : topicQuestionMap.get(content))
+			for (String t : list)
 			{
 				topics += t + " ";
 			}
-		}		
+		}	
+		list = null;
 		return topics;
 	}
 	
@@ -1503,19 +1615,28 @@ public class Data {
 			String difficulty = getDifficulty(question);
 			if (difficulty.equals("null"))
 				System.out.println("null diff");
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP));
+			boolean isPersonalized = method.isInGroup(Group.PERSONALZIED);
+			boolean isStructural = Arrays.asList(Constants.STRUCTURAL_METHODS).contains(method);
+			boolean isStatic = method.isInGroup(Group.STATIC);
+			boolean isNonStructural = Arrays.asList(Constants.NON_STRUCTURAL_METHODS).contains(method);
+
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"AP"+","+df.format(AP)+","
+							+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"nDCG"+","+df.format(nDCG)+","
+					+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 			//
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"QMeasure"+","+df.format(QMeasure)+","
+					+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural);
 			bwMeasures.newLine();
 			bwMeasures.flush();
 		    //
-			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE));
+			bwMeasures.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+"RMSE"+","+df.format(RMSE)+","
+					+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural);
 		    bwMeasures.newLine();
 		    bwMeasures.flush();
 		} catch (IOException e) {
@@ -1640,7 +1761,10 @@ public class Data {
 	}
 
 	public String getTree(String content) {
-		return contentTreeMap.get(content);
+		String tree = contentTreeMap.get(content);
+		if (tree == null)
+			tree = contentTreeMap.get(titleRdfMap.get(content));
+		return tree;
 	}
 
 	public double getWeightInSubtree(String subtree, String content) {
@@ -1661,8 +1785,18 @@ public class Data {
 		double weight = 0.0;
 		for (String concept : subtreeConcepts)
 		{
-			if (conceptMap.get(content).containsKey(concept))
-			weight += conceptMap.get(content).get(concept);
+			if (conceptMap.get(content)== null)
+				if (conceptMap.get(titleRdfMap.get(content)) == null)
+				   System.out.println("~~~~~content: "+content+"  concept:"+concept+"  conceptMap.get(content) is null");
+			if (conceptMap.get(content) != null){
+			 if (conceptMap.get(content).containsKey(concept))
+			    weight += conceptMap.get(content).get(concept);
+			}
+			else if (conceptMap.get(titleRdfMap.get(content)) != null){
+				 if (conceptMap.get(titleRdfMap.get(content)).containsKey(concept))
+				    weight += (conceptMap.get(titleRdfMap.get(content)).get(concept));
+			}
+
 		}
 		return weight;
 	}
@@ -1687,5 +1821,19 @@ public class Data {
 			e.printStackTrace();
 		}
 		
+	}
+
+	public void writeLearing(String line, Method method, int common,List<String> temp) {
+		try {
+			String txt = "";
+			for (String s : temp)
+				txt += s + ";";
+			bwLearning.write(line + "," + method + "," + common + "," + txt);
+			bwLearning.newLine();
+			bwLearning.flush();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}	
 }

@@ -19,6 +19,7 @@ public class Constants {
 		public static final int HIGH_MIN = 5;
 	}
 	
+	
 	public static enum Method 
 	{
 		RANDOM_BASELINE (Group.BASELINE) { public String toString(){return "RANDOM::BASELINE";}},
@@ -50,13 +51,19 @@ public class Constants {
 		        return this.group == group;
 		 }
 	};
-	
+		
 	public static final Method[] GOAL_BASED_METHODS = {Method.P_LOCAL_AS_GOAL,Method.P_LOCAL_COS_GOAL,Method.P_GLOBAL_AS_GOAL,Method.P_GLOBAL_COS_GOAL};
 	public static final Method[] NORMALIZED_METHODS = {
 														Method.RANDOM_BASELINE, //always 0.5 so btw 0-1
 														Method.GLOBAL_COS,Method.P_GLOBAL_COS,Method.P_GLOBAL_COS_GOAL,
 														Method.LOCAL_COS,Method.P_LOCAL_COS,Method.P_LOCAL_COS_GOAL
 	                                                   }; //the list of methods that has similarity value between 0 and 1. Others are between -1 and 1.
+
+	public static final Method[] STRUCTURAL_METHODS = {Method.NAIVE_LOCAL,Method.LOCAL_AS,Method.LOCAL_COS,Method.P_LOCAL_AS,
+		                                               Method.P_LOCAL_COS,Method.P_LOCAL_COS_GOAL,Method.P_LOCAL_AS_GOAL};
+	public static final Method[] NON_STRUCTURAL_METHODS = {Method.GLOBAL_AS,Method.GLOBAL_COS,Method.P_GLOBAL_AS,Method.P_GLOBAL_COS,
+        Method.P_GLOBAL_AS_GOAL,Method.P_GLOBAL_COS_GOAL};
+	
 	public static final int nDCG_LOG_BASE = 2;
 	public static final double RELEVANEC_THRESHOLD = +2;
 	

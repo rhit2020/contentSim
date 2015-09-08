@@ -1,0 +1,111 @@
+content_name,topic_name
+TableCreation1,"Table Creation"
+TableDrop1,"Table Deletion and Alteration"
+TableAlteration1,"Table Deletion and Alteration"
+TableAlteration2,"Table Deletion and Alteration"
+TableCreation2,"Key Constraints"
+TableCreation3,"Key Constraints"
+TableCreation4,"Key Constraints"
+TableCreation9,"Key Constraints"
+TableCreation7,"General Constraints"
+TableCreation8,"General Constraints"
+TableCreation5,"General Constraints"
+TableCreation6,"General Constraints"
+DataInsertion1,"Tuple Insertion"
+DataInsertion2,"Tuple Insertion"
+DataInsertion3,"Tuple Insertion"
+DataInsertion4,"Tuple Insertion"
+DataDeletion1,"Tuple Deletion"
+DataDeletion2,"Tuple Deletion"
+DataDeletion3,"Tuple Deletion"
+DataUpdate3,"Tuple Update"
+DataUpdate1,"Tuple Update"
+DataUpdate2,"Tuple Update"
+DataUpdate4,"Tuple Update"
+DataUpdate5,"Tuple Update"
+SELECT-FROM_question1,SELECT-FROM
+SELECT-FROM_question2,SELECT-FROM
+SELECT-FROM_question3,SELECT-FROM
+SELECT-FROM_question4,SELECT-FROM
+SELECT-FROM_question5,SELECT-FROM
+SELECT-DISTINCT_question6,SELECT-FROM
+DataSelection1,SELECT-FROM
+DataSelection2,SELECT-FROM
+DataSelection3,SELECT-FROM
+DataSelection4,SELECT-FROM
+Arithmetic_Expressions_question1,"Arithmetic Expressions"
+Arithmetic_Expressions_question2,"Arithmetic Expressions"
+Arithmetic_Expressions_question3,"Arithmetic Expressions"
+Arithmetic_Expressions_question4,"Arithmetic Expressions"
+Arithmetic_Expressions_question5,"Arithmetic Expressions"
+DataSelection12,"Arithmetic Expressions"
+SELECT-FROM-WHERE_question1,SELECT-FROM-WHERE
+SELECT-FROM-WHERE_question2,SELECT-FROM-WHERE
+SELECT-FROM-WHERE_question3,SELECT-FROM-WHERE
+SELECT-FROM-WHERE_question4,SELECT-FROM-WHERE
+SELECT-FROM-WHERE_question5,SELECT-FROM-WHERE
+DataSelection6,SELECT-FROM-WHERE
+DataSelection7,SELECT-FROM-WHERE
+DataSelection8,SELECT-FROM-WHERE
+DataSelection9,SELECT-FROM-WHERE
+DataSelecton11,SELECT-FROM-WHERE
+DataSelection13,SELECT-FROM-WHERE
+DataSelection14,SELECT-FROM-WHERE
+DataSelection15,SELECT-FROM-WHERE
+Pattern_Matching_question1,"Pattern Matching"
+Pattern_Matching_question2,"Pattern Matching"
+Pattern_Matching_question3,"Pattern Matching"
+Pattern_Matching_question4,"Pattern Matching"
+Pattern_Matching_question5,"Pattern Matching"
+DataSelection17,"Pattern Matching"
+Multiple_Table_question1,"Multiple Table Queries"
+Multiple_Table_question2,"Multiple Table Queries"
+Multiple_Table_question3,"Multiple Table Queries"
+Multiple_Table_question4,"Multiple Table Queries"
+Multiple_Table_question5,"Multiple Table Queries"
+DataSelection10,"Multiple Table Queries"
+DataSelection16,"Multiple Table Queries"
+Order-By_question1,ORDER-BY
+Order-By_question2,ORDER-BY
+Order-By_question3,ORDER-BY
+Order-By_question4,ORDER-BY
+DataSelection18,ORDER-BY
+Set_Operations_question1,"Set Operations"
+DataSelection19,"Set Operations"
+DataSelection20,"Set Operations"
+DataSelection21,"Set Operations"
+DataSelection30,"Set Operations"
+DataSelection31,"Set Operations"
+Aggregate_Functions_question1,"Aggregate Functions"
+Aggregate_Functions_question2,"Aggregate Functions"
+Aggregate_Functions_question3,"Aggregate Functions"
+Aggregate_Functions_question4,"Aggregate Functions"
+Aggregate_Functions_question5,"Aggregate Functions"
+DataSelection5,"Aggregate Functions"
+DataSelection22,"Aggregate Functions"
+DataSelection23,"Aggregate Functions"
+DataSelection24,"Aggregate Functions"
+Group-By_Having_question1,"GROUP-BY and HAVING"
+Group-By_Having_question2,"GROUP-BY and HAVING"
+Group-By_Having_question3,"GROUP-BY and HAVING"
+Group-By_Having_question4,"GROUP-BY and HAVING"
+Group-By_Having_question5,"GROUP-BY and HAVING"
+DataSelection25,"GROUP-BY and HAVING"
+DataSelection26,"GROUP-BY and HAVING"
+DataSelection32,"GROUP-BY and HAVING"
+DataSelection36,"GROUP-BY and HAVING"
+DataSelection37,"GROUP-BY and HAVING"
+DataSelection38,"GROUP-BY and HAVING"
+Sub-Queries_question1,Sub-Queries
+Sub-Queries_question2,Sub-Queries
+Sub-Queries_question3,Sub-Queries
+Sub-Queries_question4,Sub-Queries
+Sub-Queries_question5,Sub-Queries
+DataSelection28,Sub-Queries
+DataSelection29,Sub-Queries
+DataSelection27,NULL-Values
+DataSelection33,"Derived Relations and Views"
+DataSelection34,"Derived Relations and Views"
+DataSelection35,"Derived Relations and Views"
+DataSelection40,"Derived Relations and Views"
+DataSelection41,"Derived Relations and Views"

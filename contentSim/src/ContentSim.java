@@ -15,13 +15,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import api.Constants.Method;;
+import api.Constants.Method;
 
 public class ContentSim {
 
 	static List<String>  contentNotInStartEndLineFile = new ArrayList<String>();
 	private static Data db;
-	public static void calculateSim(String ratingFileName, String contentversion){
+	public static void calculateSim(String domain, String ratingFileName, String contentversion){
 		
 		db = Data.getInstance();
 		// **** for test **** START
@@ -30,12 +30,18 @@ public class ContentSim {
 		// **** for test **** END
 		if (db.isReady())
         {	
-			db.setup(ratingFileName,0,contentversion);
+			db.setup(domain,ratingFileName,0,contentversion);
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;
 
-			for (Method method : Method.values())
+			Method[] methods= null;
+			if (domain.equals("java") | domain.equals("") )
+				methods= Method.values();
+			else if (domain.equals("sql"))
+				methods= new Method[]{Method.GLOBAL_COS};
+
+			for (Method method : methods)
 			{
 				if (method.isInGroup(Method.Group.STATIC) |
 					method.isInGroup(Method.Group.BASELINE))
@@ -325,6 +331,8 @@ public class ContentSim {
 		double lackKnowledge;
 		for (String c : conceptSpace)
 		{
+			if (qConcepts == null)
+				System.out.println("qconcept is null: "+q);
 			if (method.isInGroup(api.Constants.Method.Group.STATIC) == true)
 			{
 				evector.put(c, eConceptSet.contains(c)?eConceptWeight.get(c):0);
@@ -340,6 +348,8 @@ public class ContentSim {
 						lackKnowledge = 1-kmap.get(c);	
 					//if the concept is in the target concepts of the topic weight of concept is non-zero, otherwise it is 0.
 					conceptTopicSet = new HashSet<String>(db.getConceptTopic(c));
+					if (intersection(conceptTopicSet,qTopicSet)==null)
+						System.out.println(q+" "+qConcepts.size()+" ");
 					isTargetConcept = (intersection(conceptTopicSet,qTopicSet).size()>0);
 					evector.put(c, isTargetConcept && eConceptSet.contains(c)?lackKnowledge:0);
 					qvector.put(c, isTargetConcept && qConceptSet.contains(c)?lackKnowledge:0);
@@ -404,8 +414,9 @@ public class ContentSim {
 				for (String concept : intersectionSet)
 				{
 					conceptTopicSet = new HashSet<String>(db.getConceptTopic(concept));
-					if (intersection(qTopicSet,conceptTopicSet).size() > 0)
-						intersectionTargetset.add(concept);
+					if (qTopicSet != null & conceptTopicSet!= null)
+						if (intersection(qTopicSet,conceptTopicSet).size() > 0)
+					        	intersectionTargetset.add(concept);
 				}
 				//step 2: calculate concepts in intersectionSet that are not target concept for the topic
 				Set<String> notIntersectionTargetSet = symDifference(intersectionSet,intersectionTargetset);
@@ -572,9 +583,12 @@ public class ContentSim {
 
 	private static <T> Set<T> intersection(Set<T> setA, Set<T> setB) {
 		Set<T> tmp = new TreeSet<T>();
-		for (T x : setA)
+		for (T x : setA){
+			if (setB == null)
+				return null;
 			if (setB.contains(x))
 				tmp.add(x);
+		}
 		return tmp;
 	}
 

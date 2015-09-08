@@ -18,12 +18,116 @@ public class EvaluationSim {
 
 	private static Data db;
 	
+	
+	public static void getLearningAnalysis(String ratingFileName, int all)
+	{
+		db = Data.getInstance();
+		if (db.isReady())
+        {
+			db.setup("",ratingFileName, all, "");
+
+			BufferedReader br = null;
+			String line = "";
+			String cvsSplitBy = ",";
+			boolean isHeader = true;
+			try {
+				br = new BufferedReader(new FileReader("./resources/"+ ratingFileName));
+				String[] clmn;
+				String user;
+				String group;
+				String datentime;
+				String question;
+				String exampleString;
+				Map<String, Double> simMap;
+				Map<String, Double> tmp;
+				ValueComparatorDouble vc;
+				TreeMap<String, Double> sortedTreeMap;
+				String[] exampleList = db.getExamples();
+				Map<String, Double> conceptLevelMap;
+				String[] clickExString;
+				ArrayList<String> clickedExampleList;
+				ArrayList<String> temp;
+				while ((line = br.readLine()) != null) {
+					if (isHeader) {
+						isHeader = false;
+						continue;
+					}
+					clmn = line.split(cvsSplitBy);
+					user = clmn[0];
+					group = clmn[1];
+					datentime = clmn[7];
+					question = clmn[3];
+					exampleString = clmn[4];
+					if (exampleString.equals(""))
+						continue;
+					clickExString = exampleString.split(";");
+					clickedExampleList = new ArrayList<String>();
+					for (String e : clickExString)
+						clickedExampleList.add(e.split(":")[0]);  
+					for (Method method : Method.values()) {
+						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE)) {
+							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							// sorting the simMap
+							tmp = new HashMap<String, Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String, Double>(vc);
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							temp = new ArrayList<String>(tmp.keySet());
+							int common = getOverlap(clickedExampleList,temp);
+							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+						} else if (method.isInGroup(Method.Group.PERSONALZIED)) {
+							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
+							if (conceptLevelMap == null)
+								System.out.println("~~~~~no concepts for:"+user+"  "+group+"  "+datentime);
+							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap);
+							// sorting the simMap
+							tmp = new HashMap<String, Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String, Double>(vc);
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							temp = new ArrayList<String>(tmp.keySet());
+							int common = getOverlap(clickedExampleList,temp);
+							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+						}
+					}
+					//
+					clickExString = null;
+					temp = null;
+					clickedExampleList.clear();
+					clickedExampleList = null;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			System.out.println("System is not ready!");
+		}
+		db.close();
+	}
+	
+	
+	private static int getOverlap(ArrayList<String> clickedExampleList,
+			List<String> rankedExampleList) {
+		int overlap = 0;
+		for (int i = 0; i < clickedExampleList.size(); i++)
+		{
+			if (clickedExampleList.contains(rankedExampleList.get(i)))
+				overlap++; 
+		}
+		return overlap;
+	}
+
+
 	public static void getInputCorrelationAnalysis(String ratingFileName, int all)
 	{
 		db = Data.getInstance();
 		if (db.isReady())
         {
-			db.setup(ratingFileName, all, "");
+			db.setup("",ratingFileName, all, "");
 
 			BufferedReader br = null;
 			String line = "";
@@ -87,11 +191,11 @@ public class EvaluationSim {
 	}
 	
 	
-	public static void evaluate(String ratingFileName, int all){
+	public static void evaluate(String domain, String ratingFileName, int all){
 		db = Data.getInstance();
 		if (db.isReady())
         {	
-			db.setup(ratingFileName,all,""); 
+			db.setup("",ratingFileName,all,""); 
 			Set<String> pretestList = db.getPretestCategories();
 			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
 			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>
