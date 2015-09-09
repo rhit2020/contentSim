@@ -65,6 +65,7 @@ public class EvaluationSim {
 					for (String e : clickExString)
 						clickedExampleList.add(e.split(":")[0]);  
 					for (Method method : Method.values()) {
+
 						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null);
 							// sorting the simMap
@@ -73,9 +74,10 @@ public class EvaluationSim {
 							sortedTreeMap = new TreeMap<String, Double>(vc);
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
-							temp = new ArrayList<String>(tmp.keySet());
+							temp = new ArrayList<String>(sortedTreeMap.keySet());
 							int common = getOverlap(clickedExampleList,temp);
 							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+							//db.writeLearing(line,method,common,temp);
 						} else if (method.isInGroup(Method.Group.PERSONALZIED)) {
 							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
 							if (conceptLevelMap == null)
@@ -87,9 +89,10 @@ public class EvaluationSim {
 							sortedTreeMap = new TreeMap<String, Double>(vc);
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
-							temp = new ArrayList<String>(tmp.keySet());
+							temp = new ArrayList<String>(sortedTreeMap.keySet());
 							int common = getOverlap(clickedExampleList,temp);
 							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+							//db.writeLearing(line,method,common,temp);
 						}
 					}
 					//
@@ -110,6 +113,14 @@ public class EvaluationSim {
 	}
 	
 	
+	private static void printSim(Map<String, Double> simMap) {
+		System.out.println("************************************");
+		for (String s : simMap.keySet())
+			System.out.print(s+":"+simMap.get(s));
+		System.out.println("************************************");
+	}
+
+
 	private static int getOverlap(ArrayList<String> clickedExampleList,
 			List<String> rankedExampleList) {
 		int overlap = 0;
