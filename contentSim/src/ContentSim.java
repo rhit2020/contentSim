@@ -78,6 +78,9 @@ public class ContentSim {
 		double sim = 0.0;
 		if (db == null)
 			db = Data.getInstance(); //the singleton instance
+		
+		Collections.shuffle(Arrays.asList(eList)); //list is shuffled each time (because for baseline top example should always change)
+		
 		//creating list of concepts in question
 		qConcepts = db.getConcepts(q);
 		//TFIDF values used as weight of concepts in question

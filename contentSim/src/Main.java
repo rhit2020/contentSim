@@ -7,7 +7,7 @@ public class Main {
 		   -1: means treat each username as a pretest category
 		*/
 		int all = 0; 
-//		String all_rating = "ratings.csv";
+		String all_rating = "ratings.csv";
 		String outlier_rem_rating = "ratings.outlier.removed.csv";
 //		EvaluationSim.evaluate(all_rating,all);
 //		EvaluationSim.evaluate(outlier_rem_rating,all);	
@@ -16,8 +16,8 @@ public class Main {
 		//cs.calculateSim("",outlier_rem_rating,contentversion[0]);		
 		
 		//for the correlation analysis
-//		EvaluationSim.getInputCorrelationAnalysis(all_rating,all);	
-		EvaluationSim.getLearningAnalysis("summary_qe.csv",all);	
+		EvaluationSim.getInputCorrelationAnalysis(all_rating,all,contentversion[0]);	
+		//EvaluationSim.getLearningAnalysis("summary_qe.csv",all);	
 
 	}
 }

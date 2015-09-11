@@ -62,11 +62,22 @@ public class EvaluationSim {
 						continue;
 					clickExString = exampleString.split(";");
 					clickedExampleList = new ArrayList<String>();
-					for (String e : clickExString)
-						clickedExampleList.add(e.split(":")[0]);  
+					for (String e : clickExString){
+//						if (Double.parseDouble(e.split(":")[1])==0)
+//							System.out.println("~~~~~zero percentage seen: e"+e);
+						if (Double.parseDouble(e.split(":")[1])>0)
+								clickedExampleList.add(e.split(":")[0]);  
+					}
 					for (Method method : Method.values()) {
-
-						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE)) {
+						if (method.isInGroup(Method.Group.BASELINE)) {
+							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							temp = new ArrayList<String>(simMap.keySet());
+							int common = getOverlap(clickedExampleList,temp);
+							if (common != 0)
+								db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+							//db.writeLearing(line,method,common,temp);
+						}
+						if (method.isInGroup(Method.Group.STATIC)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
@@ -76,7 +87,8 @@ public class EvaluationSim {
 							sortedTreeMap.putAll(tmp);
 							temp = new ArrayList<String>(sortedTreeMap.keySet());
 							int common = getOverlap(clickedExampleList,temp);
-							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+							if (common != 0)
+								db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
 							//db.writeLearing(line,method,common,temp);
 						} else if (method.isInGroup(Method.Group.PERSONALZIED)) {
 							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
@@ -91,7 +103,8 @@ public class EvaluationSim {
 							sortedTreeMap.putAll(tmp);
 							temp = new ArrayList<String>(sortedTreeMap.keySet());
 							int common = getOverlap(clickedExampleList,temp);
-							db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
+							if (common != 0)
+								db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
 							//db.writeLearing(line,method,common,temp);
 						}
 					}
@@ -133,12 +146,12 @@ public class EvaluationSim {
 	}
 
 
-	public static void getInputCorrelationAnalysis(String ratingFileName, int all)
+	public static void getInputCorrelationAnalysis(String ratingFileName, int all,String contentversion)
 	{
 		db = Data.getInstance();
 		if (db.isReady())
         {
-			db.setup("",ratingFileName, all, "");
+			db.setup("",ratingFileName, all, contentversion);
 
 			BufferedReader br = null;
 			String line = "";
@@ -168,7 +181,12 @@ public class EvaluationSim {
 					datentime = clmn[2];
 					question = clmn[3];
 					for (Method method : Method.values()) {
-						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE)) {
+						if (method.isInGroup(Method.Group.BASELINE)) {
+							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							db.writeRankedExample(question,"",method,new ArrayList<String>(simMap.keySet()));
+							//db.writeLearing(line,method,common,temp);
+						}
+						if (method.isInGroup(Method.Group.STATIC)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
@@ -231,7 +249,21 @@ public class EvaluationSim {
 					ratedQList = db.getRatedQuestions(pretest);
 					for (String question : ratedQList)
 					{
-						if (method.isInGroup(Method.Group.STATIC) | method.isInGroup(Method.Group.BASELINE))
+						if ( method.isInGroup(Method.Group.BASELINE))
+						{
+							simMap = ContentSim.calculateSim(question,exampleList,method,null);
+							//sortedTreeMap.keySet()  preserves the order
+							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(simMap.keySet()));
+							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
+							IdealRankMap = getIdealRanking(condensedSysRankMap);
+							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
+							AP = getAP(condensedSysRankMap,totalRelevantExample);
+							nDCG = getNDCG(condensedSysRankMap, IdealRankMap);
+							QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap, totalRelevantExample);
+							RMSE = getRMSE(condensedSimScoreMap,condensedSysRankMap,method);
+							db.writeToFile(question,pretest,method,AP,nDCG,QMeasure,RMSE);
+						}
+						if (method.isInGroup(Method.Group.STATIC))
 						{
 							simMap = ContentSim.calculateSim(question,exampleList,method,null);
 							//sorting the simMap

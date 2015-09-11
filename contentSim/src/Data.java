@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -127,11 +126,11 @@ public class Data {
 //		} catch (IOException e) {
 //				e.printStackTrace();
 //		}		
-		readContentData(path+(contentversion==""?"":contentversion+"_")+(domain.equals("")?"":domain+"_")+"content.csv");
-		readConceptData(path+(contentversion==""?"":contentversion+"_")+(domain.equals("")?"":domain+"_")+"content_concept.csv");
-		readStartEndlineData(path+(contentversion==""?"":contentversion+"_")+"content_start_end.csv");
-		readBlockEndLine(path+(contentversion==""?"":contentversion+"_")+"block_end_line.csv");
-		readAdjacentConcept(path+(contentversion==""?"":contentversion+"_")+"adjacent_concept.csv");
+		readContentData(path+(contentversion.equals("")?"":contentversion+"_")+(domain.equals("")?"":domain+"_")+"content.csv");
+		readConceptData(path+(contentversion.equals("")?"":(contentversion+"_"))+(domain.equals("")?"":domain+"_")+"content_concept.csv");
+		readStartEndlineData(path+(contentversion.equals("")?"":contentversion+"_")+"content_start_end.csv");
+		readBlockEndLine(path+(contentversion.equals("")?"":contentversion+"_")+"block_end_line.csv");
+		readAdjacentConcept(path+(contentversion.equals("")?"":contentversion+"_")+"adjacent_concept.csv");
 		readDifficulty(path+"difficulty.csv"); //content,difficulty
 		readTopic(path+(domain.equals("")?"":domain+"_")+"topic.csv");//content, topic
 		readPretest(path+"pretest_Q5_removed.csv");//user,pretest
@@ -146,7 +145,7 @@ public class Data {
 		 score of all users was 1 (assume all of them are users with ratings either 0 or 1, this means that they think it is useful example. It is totally screwing things up
 		 */
 		//for the old local similarity based on TED used in lasbtudy
-		readContentTree(path+(contentversion==""?"":contentversion+"_")+"tree.csv");
+		readContentTree(path+(contentversion.equals("")?"":contentversion+"_")+"tree.csv");
 		readTitleRdf(path+"title_rdfid.csv");
 		
 		//filtering useless contents
@@ -1060,6 +1059,8 @@ public class Data {
 				clmn = line.split(cvsSplitBy);
 				content = clmn[0];
 				concept = clmn[1];
+				if (content.equals("jDouble1"))
+					System.out.println();
 				weight = Double.parseDouble(clmn[2]);
 				if (conceptMap.containsKey(content))
 				{
@@ -1807,6 +1808,11 @@ public class Data {
 			String difficulty = getDifficulty(question);
 			if (difficulty.equals("null"))
 				System.out.println("null diff");
+			boolean isPersonalized = method.isInGroup(Group.PERSONALZIED);
+			boolean isStructural = Arrays.asList(Constants.STRUCTURAL_METHODS).contains(method);
+			boolean isStatic = method.isInGroup(Group.STATIC);
+			boolean isNonStructural = Arrays.asList(Constants.NON_STRUCTURAL_METHODS).contains(method);
+			boolean isGoalBased = Arrays.asList(Constants.GOAL_BASED_METHODS).contains(method);
 			String rankedExampleTxt = "";
 			for (String example : orderedList)
 			{
@@ -1814,13 +1820,13 @@ public class Data {
 			}
 			if (orderedList.isEmpty() == false)
 				rankedExampleTxt = rankedExampleTxt.substring(0,rankedExampleTxt.length()-1); //ignoring the last comma
-			bwRankedExample.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+rankedExampleTxt);
+			bwRankedExample.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+rankedExampleTxt
+					+","+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural+","+isGoalBased);
 			bwRankedExample.newLine();
 			bwRankedExample.flush();			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 	}
 
 	public void writeLearing(String line, Method method, int common,List<String> temp) {
