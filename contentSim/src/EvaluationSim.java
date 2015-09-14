@@ -180,6 +180,7 @@ public class EvaluationSim {
 					group = clmn[1];
 					datentime = clmn[2];
 					question = clmn[3];
+					question = Data.getInstance().getQuestion(question);
 					for (Method method : Method.values()) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null);

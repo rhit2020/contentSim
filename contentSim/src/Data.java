@@ -1059,8 +1059,7 @@ public class Data {
 				clmn = line.split(cvsSplitBy);
 				content = clmn[0];
 				concept = clmn[1];
-				if (content.equals("jDouble1"))
-					System.out.println();
+				
 				weight = Double.parseDouble(clmn[2]);
 				if (conceptMap.containsKey(content))
 				{
@@ -1841,5 +1840,17 @@ public class Data {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public String getQuestion(String question) {
+		if (contentMap.get("question").contains(question))
+			return question;
+		else
+		{
+			for (String s: titleRdfMap.keySet())
+				if (titleRdfMap.get(s).equals(question))
+					return s;
+		}
+		return null;
 	}	
 }
