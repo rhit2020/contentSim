@@ -18,7 +18,6 @@ public class EvaluationSim {
 
 	private static Data db;
 	
-	
 	public static void getLearningAnalysis(String ratingFileName, int all)
 	{
 		db = Data.getInstance();

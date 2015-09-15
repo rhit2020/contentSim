@@ -54,7 +54,7 @@ public class Data {
 	private Map<String,String> contentTreeMap; //Map<content,tree> this is for local similarity using TED approach used in study 
 	private Map<String,String> titleRdfMap; //Map<title,rdf>
 	private ArrayList<String> validContents; //list<title>
-
+	private Map<String,Integer> exampleIdMap;
 	private static Data data = null;
 	
 	private Data() {
@@ -150,9 +150,22 @@ public class Data {
 		
 		//filtering useless contents
 		readValidContents(path+"validContents.csv");
+		
+		fillExampleIdMap();
 
 	}
 	
+	private void fillExampleIdMap() {
+		exampleIdMap = new HashMap<String,Integer>();
+		int i = 0;
+		for (String e: getExamples())
+		{
+			exampleIdMap.put(e, i);
+			i++;
+		}
+		
+	}
+
 	private void readValidContents(String path) {
 		// TODO Auto-generated method stub
 		validContents = new ArrayList<String>();
@@ -1812,13 +1825,14 @@ public class Data {
 			boolean isStatic = method.isInGroup(Group.STATIC);
 			boolean isNonStructural = Arrays.asList(Constants.NON_STRUCTURAL_METHODS).contains(method);
 			boolean isGoalBased = Arrays.asList(Constants.GOAL_BASED_METHODS).contains(method);
-			String rankedExampleTxt = "";
+			String rankedExampleTxt = "\"";
 			for (String example : orderedList)
 			{
-				rankedExampleTxt += example + "@";
+				rankedExampleTxt +=getId(example) + ",";
 			}
 			if (orderedList.isEmpty() == false)
 				rankedExampleTxt = rankedExampleTxt.substring(0,rankedExampleTxt.length()-1); //ignoring the last comma
+			rankedExampleTxt = rankedExampleTxt+ "\"";
 			bwRankedExample.write(question+","+topicText+","+difficulty+","+pretest+","+method.toString()+","+rankedExampleTxt
 					+","+isStatic+","+isPersonalized+","+isStructural+","+isNonStructural+","+isGoalBased);
 			bwRankedExample.newLine();
@@ -1826,6 +1840,10 @@ public class Data {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private int getId(String example) {
+		return exampleIdMap.get(example);
 	}
 
 	public void writeLearing(String line, Method method, int common,List<String> temp) {
