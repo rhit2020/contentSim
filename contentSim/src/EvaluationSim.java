@@ -64,7 +64,8 @@ public class EvaluationSim {
 					for (String e : clickExString){
 //						if (Double.parseDouble(e.split(":")[1])==0)
 //							System.out.println("~~~~~zero percentage seen: e"+e);
-						if (Double.parseDouble(e.split(":")[1])>0)
+						//TODO: uncomment following check for computing the learning case
+						//if (Double.parseDouble(e.split(":")[1])>0)
 								clickedExampleList.add(e.split(":")[0]);  
 					}
 					for (Method method : Method.values()) {
