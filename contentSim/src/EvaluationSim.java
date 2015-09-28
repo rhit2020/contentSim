@@ -70,7 +70,7 @@ public class EvaluationSim {
 					}
 					for (Method method : Method.values()) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
-							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
 							temp = new ArrayList<String>(simMap.keySet());
 							int common = getOverlap(clickedExampleList,temp);
 							if (common != 0)
@@ -78,7 +78,7 @@ public class EvaluationSim {
 							//db.writeLearing(line,method,common,temp);
 						}
 						if (method.isInGroup(Method.Group.STATIC)) {
-							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -94,7 +94,7 @@ public class EvaluationSim {
 							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
 							if (conceptLevelMap == null)
 								System.out.println("~~~~~no concepts for:"+user+"  "+group+"  "+datentime);
-							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap);
+							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap,null,null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -152,6 +152,27 @@ public class EvaluationSim {
 		if (db.isReady())
         {
 			db.setup("",ratingFileName, all, contentversion);
+			//HashMap<user,HashMap<datentime,HashMap<question, questionarray[]>>>
+			HashMap<String,HashMap<String,HashMap<String, String[]>>> qact = new HashMap<String,HashMap<String,HashMap<String, String[]>>>();
+			HashMap<String,HashMap<String, String[]>> dmap;
+			//prepare the map of user-question-activities
+			HashMap<String,ArrayList<String>> userTime = db.getUserDatentime();
+			GetUserQuestionActivity.openConnection(); //open the db connection
+			for (String u : userTime.keySet()){
+				for (String d : userTime.get(u))
+				{
+					dmap = qact.get(u);
+					if (dmap != null)
+					{
+						dmap.put(d, GetUserQuestionActivity.getUserQuestionsActivity(u, d));
+					}else{
+						dmap = new HashMap<String,HashMap<String, String[]>>();
+						dmap.put(d, GetUserQuestionActivity.getUserQuestionsActivity(u, d));
+						qact.put(u,dmap);
+					}
+				}
+			}
+			GetUserQuestionActivity.closeConnection(); //close the db connection
 
 			BufferedReader br = null;
 			String line = "";
@@ -170,6 +191,7 @@ public class EvaluationSim {
 				TreeMap<String, Double> sortedTreeMap;
 				String[] exampleList = db.getExamples();
 				Map<String, Double> conceptLevelMap;
+				Map<String, Map<String, Double>> kcByContent = db.getConceptMap();
 				while ((line = br.readLine()) != null) {
 					if (isHeader) {
 						isHeader = false;
@@ -183,12 +205,12 @@ public class EvaluationSim {
 					question = Data.getInstance().getQuestion(question);
 					for (Method method : Method.values()) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
-							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
 							db.writeRankedExample(question,"",method,new ArrayList<String>(simMap.keySet()));
 							//db.writeLearing(line,method,common,temp);
 						}
 						if (method.isInGroup(Method.Group.STATIC)) {
-							simMap = ContentSim.calculateSim(question,exampleList, method, null);
+							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -198,7 +220,7 @@ public class EvaluationSim {
 							db.writeRankedExample(question,"",method,new ArrayList<String>(sortedTreeMap.keySet()));
 						} else if (method.isInGroup(Method.Group.PERSONALZIED)) {
 							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
-							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap);
+							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap,null,null);
 							// sorting the simMap
 							tmp = new HashMap<String, Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -206,6 +228,19 @@ public class EvaluationSim {
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
 							db.writeRankedExample(question,"",method,new ArrayList<String>(sortedTreeMap.keySet()));
+						}
+						else if (method.isInGroup(Method.Group.NAIVE_PERSONALIZED))
+						{
+							conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
+							simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap,qact.get(user).get(datentime),kcByContent);
+							// sorting the simMap
+							tmp = new HashMap<String, Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String, Double>(vc);
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							db.writeRankedExample(question,"",method,new ArrayList<String>(sortedTreeMap.keySet()));
+
 						}
 					}
 				}
@@ -252,7 +287,7 @@ public class EvaluationSim {
 					{
 						if ( method.isInGroup(Method.Group.BASELINE))
 						{
-							simMap = ContentSim.calculateSim(question,exampleList,method,null);
+							simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
 							//sortedTreeMap.keySet()  preserves the order
 							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(simMap.keySet()));
 							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
@@ -266,7 +301,7 @@ public class EvaluationSim {
 						}
 						if (method.isInGroup(Method.Group.STATIC))
 						{
-							simMap = ContentSim.calculateSim(question,exampleList,method,null);
+							simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
 							//sorting the simMap
 							tmp = new HashMap<String,Double>();
 							vc = new ValueComparatorDouble(tmp);
@@ -289,7 +324,7 @@ public class EvaluationSim {
 							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
 							for (Map<String,Double> kmap : conceptLevelMap)
 							{
-								simMap = ContentSim.calculateSim(question,exampleList,method,kmap);
+								simMap = ContentSim.calculateSim(question,exampleList,method,kmap,null,null);
 								//sorting the simMap
 								tmp = new HashMap<String,Double>();
 								vc = new ValueComparatorDouble(tmp);

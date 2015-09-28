@@ -73,7 +73,7 @@ public class PostProcessLearning {
 							bw.newLine();
 							bw.flush();
 							
-							bw2.write(clmn[0]+","+clmn[1]+","+clmn[2]+","+clmn[3]+","+clmn[7]+","+best.split(":")[0]);
+							bw2.write(clmn[0]+","+clmn[1]+","+clmn[2]+","+clmn[3]+","+clmn[7]+","+best.split(":")[0]+","+clmn[8]);
 							bw2.newLine();
 							bw2.flush();
 						}									

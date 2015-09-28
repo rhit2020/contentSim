@@ -48,7 +48,7 @@ public class ContentSim {
 				{
 					for (String q : qList)
 					{					
-						rankMap = calculateSim(q, eList,method,null);
+						rankMap = calculateSim(q, eList,method,null,null,null);
 						for (String e : rankMap.keySet())
 							db.insertContentSim(q, e, rankMap.get(e), method.toString());
 					}
@@ -66,8 +66,11 @@ public class ContentSim {
 
 	/*
 	 * returns a map, with keys as example and values as the calculated similarity value
+	 * Note, the last two arguments are only used for PAVERAGE and PRERANK
 	 */
-	public static HashMap<String, Double> calculateSim(String q, String[] eList, Method method, Map<String, Double> kmap) {
+	public static HashMap<String, Double> calculateSim(String q, String[] eList, Method method,
+			                                           Map<String, Double> kmap, HashMap<String,String[]>questions_activity,
+			                                           Map<String, Map<String, Double>> kcByContent) {
 		HashMap<String,Double> rankMap = new HashMap<String,Double>();
 		List<String> qConcepts = null;
 		List<String> eConcepts = null;
@@ -81,105 +84,116 @@ public class ContentSim {
 		
 		Collections.shuffle(Arrays.asList(eList)); //list is shuffled each time (because for baseline top example should always change)
 		
-		//creating list of concepts in question
-		qConcepts = db.getConcepts(q);
-		//TFIDF values used as weight of concepts in question
-		qConceptWeight = db.getTFIDF(q);
-		//subtrees in question
-		qtree = getSubtrees(q);
-		List<String> qTopicList = db.getTopic(q); //topic(s) of the question
-		for (String e : eList) {
-			sim = 0.0;
-			//creating list of concepts in example
-			eConcepts = db.getConcepts(e);
-			//TFIDF values used as weight of concepts in example
-			eConceptWeight = db.getTFIDF(e);
-			//subtrees in example
-			etree = getSubtrees(e);
-			//calculate global similarity 				
-			switch(method){
-			//baseline method
-			case RANDOM_BASELINE:
-			{
-				sim = 0.5; // the similarity of random model for each example is same random number 0.5.
-				break;
-			}
-			case NAIVE_LOCAL:
-			{
-				sim = calStructuralContentSim(q, e);
-				break;
-			}
-			//static methods
-			case GLOBAL_AS:
-			{
-				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 
-				break;
-			}
-			case GLOBAL_COS:
-			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
-				break;
-			}
-			case LOCAL_AS:
-			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
-				break;
-			}
-			case LOCAL_COS:
-			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
-				break;
-			}
-			//personalized methods
-			case P_GLOBAL_AS:
-			{
-				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 	
-				break;
-			}
-			case P_GLOBAL_COS:
-			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
-				break;
-			}
-			case P_LOCAL_AS:
-			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
-				break;
-			}
-			case P_LOCAL_COS:
-			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
-				break;
-			}
-			//personalized with focus on current goal
-			case P_LOCAL_AS_GOAL:
-			{
-				sim = localSim(qtree,etree,"AS",null,null,method,kmap,qTopicList,q); 
-				break;
-			}
-			case P_LOCAL_COS_GOAL:
-			{
-				sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
-				break;
-			}
-			case P_GLOBAL_AS_GOAL:
-			{
-				sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,qTopicList);
-				break;
-			}
-			case P_GLOBAL_COS_GOAL:
-			{
-				sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
-				break;
-			}
-			default:
-				break;								
-			}
-			rankMap.put(e, sim);
-		}				
-		return rankMap;
-	}
-	
+		if (method.toString().equals("P::AVERAGE") | method.toString().equals("P::RE-RANK"))		
+		{
+			//get static similarities of Naive-local
+			Map<String,Double> exampleMap = calculateSim(q,eList, method, kmap,null,null);
+			boolean isAverage = method.toString().equals("P::AVERAGE");
+			return getNAIVEPersonalizedRecommendation(exampleMap,questions_activity,kcByContent,isAverage);
+		}
+		else
+		{
+			//creating list of concepts in question
+			qConcepts = db.getConcepts(q);
+			//TFIDF values used as weight of concepts in question
+			qConceptWeight = db.getTFIDF(q);
+			//subtrees in question
+			qtree = getSubtrees(q);
+			List<String> qTopicList = db.getTopic(q); //topic(s) of the question
+			for (String e : eList) {
+				sim = 0.0;
+				//creating list of concepts in example
+				eConcepts = db.getConcepts(e);
+				//TFIDF values used as weight of concepts in example
+				eConceptWeight = db.getTFIDF(e);
+				//subtrees in example
+				etree = getSubtrees(e);
+				//calculate global similarity 				
+				switch(method){
+				//baseline method
+				case RANDOM_BASELINE:
+				{
+					sim = 0.5; // the similarity of random model for each example is same random number 0.5.
+					break;
+				}
+				case NAIVE_LOCAL:
+				{
+					sim = calStructuralContentSim(q, e);
+					break;
+				}
+				//static methods
+				case GLOBAL_AS:
+				{
+					sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 
+					break;
+				}
+				case GLOBAL_COS:
+				{
+					sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
+					break;
+				}
+				case LOCAL_AS:
+				{
+					sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
+					break;
+				}
+				case LOCAL_COS:
+				{
+					sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
+					break;
+				}
+				//personalized methods
+				case P_GLOBAL_AS:
+				{
+					sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,null); 	
+					break;
+				}
+				case P_GLOBAL_COS:
+				{
+					sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,null,q); 
+					break;
+				}
+				case P_LOCAL_AS:
+				{
+					sim = localSim(qtree,etree,"AS",null,null,method,kmap,null,q); 
+					break;
+				}
+				case P_LOCAL_COS:
+				{
+					sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,null,q); 
+					break;
+				}
+				//personalized with focus on current goal
+				case P_LOCAL_AS_GOAL:
+				{
+					sim = localSim(qtree,etree,"AS",null,null,method,kmap,qTopicList,q); 
+					break;
+				}
+				case P_LOCAL_COS_GOAL:
+				{
+					sim = localSim(qtree,etree,"COS",qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
+					break;
+				}
+				case P_GLOBAL_AS_GOAL:
+				{
+					sim = simAssociationCoefficient(qConcepts,eConcepts,method,kmap,qTopicList);
+					break;
+				}
+				case P_GLOBAL_COS_GOAL:
+				{
+					sim = simCosine(qConcepts,eConcepts,qConceptWeight,eConceptWeight,method,kmap,qTopicList,q); 
+					break;
+				}
+				default:
+					break;								
+				}
+				rankMap.put(e, sim);
+			}				
+			return rankMap;
+		}
+		
+	}	
+
 	private static List<ArrayList<String>> getSubtrees(String content) {
 		List<ArrayList<String>> subtreeList = new ArrayList<ArrayList<String>>();
 		List<Integer> lines = db.getStartEndLine(content);
@@ -566,8 +580,94 @@ public class ContentSim {
 		return sim;
 	}
 	
-	
-	
+
+	/* @author: Roya Hosseini
+	 * This method re-ranks the top examples selected by the CSS recommendation method using user model
+	 * Parameters:
+	 * - exampleMap: the map with the key as the  examples and the values as their corresponding similarity
+	 * - questions_activity: @see guanjieDBInterface.generateRecommendations javaDoc
+	 * Returns:
+	 * - a descendingly sortedmap of examples with their similarity 
+	 */
+	public static HashMap<String, Double> getNAIVEPersonalizedRecommendation(Map<String,Double> exampleMap,
+			   								  HashMap<String,String[]> questions_activity,
+			   								  Map<String, Map<String, Double>> kcByContent,boolean isAverage)
+	{
+		
+		double alpha = 1/2;
+
+		HashMap<String, Double> rankMap = new HashMap<String,Double>();
+		Map<String, Double> conceptList = new HashMap<String, Double>();
+		
+		int k = 0;
+		int n = 0;
+		int s = 0;
+		for (String e : exampleMap.keySet())
+		{
+			k = 0; //number of known concepts in example
+			n = 0;//number of new concepts in example
+			s = 0;//number of shady concepts in example	
+			conceptList = kcByContent.get(e);
+			for (String c : conceptList.keySet()) {
+				double nsuccess = 0;
+				double totalAtt = 0;
+				boolean hasAttempt = false;
+				List<String> activityList = getActivitiesWithConcept(c,kcByContent);
+
+				for (String a : activityList) {
+					if (questions_activity.containsKey(a)) {
+						String[] x = questions_activity.get(a);
+						totalAtt += Double.parseDouble(x[1]); // x[1] = nattempt
+						nsuccess += Double.parseDouble(x[2]); // x[2] = nsuccess
+						hasAttempt = true;
+					}
+				}
+				if (hasAttempt == false)
+				{
+					  n++;	
+				}
+				else {
+					if (nsuccess > (totalAtt/2))
+						k++;
+					else
+						s++;
+				}
+			}
+			double rank = 0.0;
+			if (conceptList.size() == 0)
+				rank = 0.0;
+			else if (k==0 & (s+n)> 3.0)
+			{
+				rank = -(s+n);
+			}
+			else
+				rank = (3 - (s+n)) * Math.pow((double) k / (double) conceptList.size(), (3 - (s+n)));
+			
+			double value = 0;
+			
+			if(isAverage)
+				value = (1-alpha)*rank+(alpha*exampleMap.get(e));
+			else
+				value = rank;
+
+			rankMap.put(e, value);
+		}
+		return rankMap;
+	}
+
+	 private static List<String> getActivitiesWithConcept(String concept, Map<String, Map<String, Double>> kcByContent ) {
+			List<String> activities = new ArrayList<String>();
+			for (String content: kcByContent.keySet())
+			{
+				if (kcByContent.get(content).containsKey(concept))
+				{
+					if (activities.contains(content) == false)
+						activities.add(content);
+				}
+			}
+			return activities;
+	}
+	 
 	private static double calculateDist(String es, String qs,String e, String q) {
 		TreeDefinition eTree = CreateTreeHelper.makeTree(es);
 		TreeDefinition qTree = CreateTreeHelper.makeTree(qs);

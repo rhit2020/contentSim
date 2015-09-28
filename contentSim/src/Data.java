@@ -1828,7 +1828,7 @@ public class Data {
 			String rankedExampleTxt = "\"";
 			for (String example : orderedList)
 			{
-				rankedExampleTxt +=getId(example) + ",";
+				rankedExampleTxt +=getId(example) + "@";
 			}
 			if (orderedList.isEmpty() == false)
 				rankedExampleTxt = rankedExampleTxt.substring(0,rankedExampleTxt.length()-1); //ignoring the last comma
@@ -1859,6 +1859,10 @@ public class Data {
 			e.printStackTrace();
 		}
 	}
+	
+	public Map<String, Map<String, Double>> getConceptMap(){
+		return conceptMap;
+	}
 
 	public String getQuestion(String question) {
 		if (contentMap.get("question").contains(question))
@@ -1871,4 +1875,14 @@ public class Data {
 		}
 		return null;
 	}	
+	
+	public HashMap<String,ArrayList<String>> getUserDatentime()
+	{
+		//Map<group,Map<user,Map<datentime,Map<concept,knowledge>>>>
+		HashMap<String, ArrayList<String>> tmp = new HashMap<String,ArrayList<String>>();
+		for (Map<String,Map<String,Map<String,Double>>> gmap : conceptLevelMap.values()) //usermaps in each group
+			for (String user : gmap.keySet())
+			      tmp.put(user, new ArrayList<String> (gmap.get(user).keySet()));
+		return tmp;
+	}
 }
