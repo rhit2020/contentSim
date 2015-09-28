@@ -35,7 +35,9 @@ public class Constants {
 		P_GLOBAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::AS::GOAL";}},
 		P_GLOBAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::GLOBAL::COS::GOAL";}},
 		P_LOCAL_AS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::AS::GOAL";}},
-		P_LOCAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS::GOAL";}};
+		P_LOCAL_COS_GOAL (Group.PERSONALZIED){ public String toString(){return "P::LOCAL::COS::GOAL";}},
+		P_AVERAGE (Group.NAIVE_PERSONALIZED){ public String toString(){return "P::AVERAGE";}},
+		P_RE_RANK (Group.NAIVE_PERSONALIZED){ public String toString(){return "P::RE-RANK";}};
 		
 		
 		private Group group;
@@ -45,7 +47,8 @@ public class Constants {
 		public enum Group {
 			    BASELINE,
 		        STATIC,
-		        PERSONALZIED;		       
+		        PERSONALZIED,
+		        NAIVE_PERSONALIZED;		       
 		}
 		 public boolean isInGroup(Group group) {
 		        return this.group == group;
