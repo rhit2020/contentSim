@@ -16,9 +16,9 @@ public class Main {
 		//cs.calculateSim("",outlier_rem_rating,contentversion[0]);		
 		
 		//for the correlation analysis
-		//EvaluationSim.getInputCorrelationAnalysis(all_rating,all,contentversion[0]);	
+		EvaluationSim.getInputCorrelationAnalysis(all_rating,all,contentversion[0]);	
 	//	EvaluationSim.getLearningAnalysis("summary_qe.csv",all);	
-		PostProcessLearning.processTimeEngagementInOverlappingExamples("outputLearning_0_summary_qe.csv");
+		//PostProcessLearning.processTimeEngagementInOverlappingExamples("outputLearning_0_summary_qe.csv");
 
 	}
 }

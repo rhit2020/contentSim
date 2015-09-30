@@ -20,9 +20,9 @@ public class GetUserQuestionActivity{
 	   HashMap<String, String[]> res = new HashMap<String, String[]>();
         try {
             stmt = conn.createStatement();
-            String query = "(select if(UA.appid=25,AC.activity,mid(AC.URI,INSTR(AC.URI,'#')+1)) as activity, count(UA.activityid) as nattempts,  sum(UA.Result) as nsuccess from um2.ent_user_activity UA, um2.ent_activity AC where (UA.appid=25 OR UA.appid=2) and "
-            		+ "UA.datentime < '"+datentime+"'"
-            		+ " UA.userid = (select userid from um2.ent_user where login='"
+            String query = "(select if(UA.appid=25,AC.activity,mid(AC.URI,INSTR(AC.URI,'#')+1)) as activity, count(UA.activityid) as nattempts,  sum(UA.Result) as nsuccess from um2.archive_user_activity UA, um2.ent_activity AC where (UA.appid=25 OR UA.appid=2) and "
+            		+ "UA.datentime < '"+datentime.replaceAll("\"","")+"'"
+            		+ " and UA.userid = (select userid from um2.ent_user where login='"
                     + usr
                     + "') and AC.activityid=UA.activityid and UA.Result != -1 group by UA.activityid);";
 
@@ -71,7 +71,7 @@ public class GetUserQuestionActivity{
 			
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 			//System.out.println(dbstring+"?"+ "user="+dbuser+"&password="+dbpass);
-			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/um2","root","");
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/um2","root","");
 			if (conn!=null){
 				return true;
 			}

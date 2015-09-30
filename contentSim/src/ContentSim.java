@@ -87,7 +87,7 @@ public class ContentSim {
 		if (method.toString().equals("P::AVERAGE") | method.toString().equals("P::RE-RANK"))		
 		{
 			//get static similarities of Naive-local
-			Map<String,Double> exampleMap = calculateSim(q,eList, method, kmap,null,null);
+			Map<String,Double> exampleMap = calculateSim(q,eList, Method.NAIVE_LOCAL, kmap,null,null);
 			boolean isAverage = method.toString().equals("P::AVERAGE");
 			return getNAIVEPersonalizedRecommendation(exampleMap,questions_activity,kcByContent,isAverage);
 		}
@@ -594,7 +594,7 @@ public class ContentSim {
 			   								  Map<String, Map<String, Double>> kcByContent,boolean isAverage)
 	{
 		
-		double alpha = 1/2;
+		double alpha = 0.5;
 
 		HashMap<String, Double> rankMap = new HashMap<String,Double>();
 		Map<String, Double> conceptList = new HashMap<String, Double>();

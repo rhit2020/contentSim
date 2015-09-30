@@ -203,7 +203,9 @@ public class EvaluationSim {
 					datentime = clmn[2];
 					question = clmn[3];
 					question = Data.getInstance().getQuestion(question);
-					for (Method method : Method.values()) {
+					Method[] mm = {Method.P_AVERAGE,Method.P_RE_RANK};
+					//for (Method method : Method.values()) {
+					for (Method method : mm) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
 							db.writeRankedExample(question,"",method,new ArrayList<String>(simMap.keySet()));
