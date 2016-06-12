@@ -30,7 +30,7 @@ public class ContentSim {
 		// **** for test **** END
 		if (db.isReady())
         {	
-			db.setup(domain,ratingFileName,0,contentversion);
+			db.setup(domain,ratingFileName,0,contentversion,"");
 			String[] eList = db.getExamples();
 			String[] qList = db.getQuestions();
 			HashMap<String,Double> rankMap;
@@ -365,9 +365,12 @@ public class ContentSim {
 						lackKnowledge = 1-kmap.get(c);	
 					//if the concept is in the target concepts of the topic weight of concept is non-zero, otherwise it is 0.
 					conceptTopicSet = new HashSet<String>(db.getConceptTopic(c));
-					if (intersection(conceptTopicSet,qTopicSet)==null)
-						System.out.println(q+" "+qConcepts.size()+" ");
-					isTargetConcept = (intersection(conceptTopicSet,qTopicSet).size()>0);
+//					if (intersection(conceptTopicSet,qTopicSet)==null)
+//						System.out.println(q+" "+qConcepts.size()+" ");		
+					isTargetConcept = false;
+					if (intersection(conceptTopicSet,qTopicSet) != null)
+						if (intersection(conceptTopicSet,qTopicSet).size()>0)
+							isTargetConcept = true;
 					evector.put(c, isTargetConcept && eConceptSet.contains(c)?lackKnowledge:0);
 					qvector.put(c, isTargetConcept && qConceptSet.contains(c)?lackKnowledge:0);
 				}
@@ -460,7 +463,9 @@ public class ContentSim {
 			else
 			{
 				for (String concept : intersectionSet)
-				{					
+				{	
+					if (kmap==null)
+						System.out.println("~~~~~~~~~KMAP IS NULL:"+method+"  "+qConcepts.size()+"  "+eConcepts.size()+" "+intersectionSet.size());
 					if (kmap.get(concept) == null)
 						lackKnowledge = 0;
 					else
@@ -613,7 +618,6 @@ public class ContentSim {
 				double totalAtt = 0;
 				boolean hasAttempt = false;
 				List<String> activityList = getActivitiesWithConcept(c,kcByContent);
-
 				for (String a : activityList) {
 					if (questions_activity.containsKey(a)) {
 						String[] x = questions_activity.get(a);

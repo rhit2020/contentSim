@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,12 +19,12 @@ public class EvaluationSim {
 
 	private static Data db;
 	
-	public static void getLearningAnalysis(String ratingFileName, int all)
+	public static void getLearningAnalysis(String ratingFileName, int all, String filterUsers)
 	{
 		db = Data.getInstance();
 		if (db.isReady())
         {
-			db.setup("",ratingFileName, all, "");
+			db.setup("",ratingFileName, all, "",filterUsers);
 
 			BufferedReader br = null;
 			String line = "";
@@ -46,6 +47,8 @@ public class EvaluationSim {
 				String[] clickExString;
 				ArrayList<String> clickedExampleList;
 				ArrayList<String> temp;
+				List<String> baselineSimShuffledList;
+
 				while ((line = br.readLine()) != null) {
 					if (isHeader) {
 						isHeader = false;
@@ -71,7 +74,10 @@ public class EvaluationSim {
 					for (Method method : Method.values()) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
-							temp = new ArrayList<String>(simMap.keySet());
+							baselineSimShuffledList = new ArrayList<String>(simMap.keySet());
+							Collections.shuffle(baselineSimShuffledList);
+
+							temp = new ArrayList<String>(baselineSimShuffledList);
 							int common = getOverlap(clickedExampleList,temp);
 							if (common != 0)
 								db.writeLearing(line,method,common,temp.subList(0, clickedExampleList.size()));
@@ -146,12 +152,12 @@ public class EvaluationSim {
 	}
 
 
-	public static void getInputCorrelationAnalysis(String ratingFileName, int all,String contentversion)
+	public static void getInputCorrelationAnalysis(String ratingFileName, int all,String contentversion, String filterUsers)
 	{
 		db = Data.getInstance();
 		if (db.isReady())
         {
-			db.setup("",ratingFileName, all, contentversion);
+			db.setup("",ratingFileName, all, contentversion,filterUsers);
 			//HashMap<user,HashMap<datentime,HashMap<question, questionarray[]>>>
 			HashMap<String,HashMap<String,HashMap<String, String[]>>> qact = new HashMap<String,HashMap<String,HashMap<String, String[]>>>();
 			HashMap<String,HashMap<String, String[]>> dmap;
@@ -189,9 +195,10 @@ public class EvaluationSim {
 				Map<String, Double> tmp;
 				ValueComparatorDouble vc;
 				TreeMap<String, Double> sortedTreeMap;
-				String[] exampleList = db.getExamples();
+				String[] exampleList = db.getExamplesStudy();
 				Map<String, Double> conceptLevelMap;
 				Map<String, Map<String, Double>> kcByContent = db.getConceptMap();
+				List<String> baselineSimShuffledList;
 				while ((line = br.readLine()) != null) {
 					if (isHeader) {
 						isHeader = false;
@@ -203,12 +210,15 @@ public class EvaluationSim {
 					datentime = clmn[2];
 					question = clmn[3];
 					question = Data.getInstance().getQuestion(question);
-					Method[] mm = {Method.P_AVERAGE,Method.P_RE_RANK};
-					//for (Method method : Method.values()) {
-					for (Method method : mm) {
+					//Method[] mm = {Method.NAIVE_LOCAL};
+					for (Method method : Method.values()) {
+					//for (Method method : mm) {
 						if (method.isInGroup(Method.Group.BASELINE)) {
 							simMap = ContentSim.calculateSim(question,exampleList, method, null,null,null);
-							db.writeRankedExample(question,"",method,new ArrayList<String>(simMap.keySet()));
+							baselineSimShuffledList = new ArrayList<String>(simMap.keySet());
+							Collections.shuffle(baselineSimShuffledList);
+
+							db.writeRankedExample(question,"",method,new ArrayList<String>(baselineSimShuffledList));
 							//db.writeLearing(line,method,common,temp);
 						}
 						if (method.isInGroup(Method.Group.STATIC)) {
@@ -257,13 +267,188 @@ public class EvaluationSim {
 		db.close();
 	}
 	
-	
-	public static void evaluate(String domain, String ratingFileName, int all){
+	public static void getTop3NaivePersonalizedApproach(String ratingFileName, int all,String contentversion, String filterUsers)
+	{
+		db = Data.getInstance();
+		if (db.isReady())
+        {
+			db.setup("",ratingFileName, all, contentversion,filterUsers);
+			//HashMap<user,HashMap<datentime,HashMap<question, questionarray[]>>>
+			HashMap<String,HashMap<String,HashMap<String, String[]>>> qact = new HashMap<String,HashMap<String,HashMap<String, String[]>>>();
+			HashMap<String,HashMap<String, String[]>> dmap;
+			//prepare the map of user-question-activities
+			HashMap<String,ArrayList<String>> userTime = db.getUserDatentime();
+			GetUserQuestionActivity.openConnection(); //open the db connection
+			for (String u : userTime.keySet()){
+				for (String d : userTime.get(u))
+				{
+					dmap = qact.get(u);
+					if (dmap != null)
+					{
+						dmap.put(d, GetUserQuestionActivity.getUserQuestionsActivity(u, d));
+					}else{
+						dmap = new HashMap<String,HashMap<String, String[]>>();
+						dmap.put(d, GetUserQuestionActivity.getUserQuestionsActivity(u, d));
+						qact.put(u,dmap);
+					}
+				}
+			}
+			GetUserQuestionActivity.closeConnection(); //close the db connection
+
+			BufferedReader br = null;
+			String line = "";
+			String cvsSplitBy = ",";
+			boolean isHeader = true;
+			try {
+				br = new BufferedReader(new FileReader("./resources/"+ ratingFileName));
+				String[] clmn;
+				String user;
+				String group;
+				String datentime;
+				String question;
+				Map<String, Double> simMap;
+				Map<String, Double> tmp;
+				ValueComparatorDouble vc;
+				TreeMap<String, Double> sortedTreeMap;
+				String[] exampleList = db.getExamplesStudy();
+				Map<String, Double> conceptLevelMap;
+				Map<String, Map<String, Double>> kcByContent = db.getConceptMap();
+				Map<String, Double> condensedSysRankMap;	//Map<example,SimilarityValue>
+				int num = 0;
+
+				while ((line = br.readLine()) != null) {
+					if (isHeader) {
+						isHeader = false;
+						continue;
+					}
+					clmn = line.split(cvsSplitBy);
+					user = clmn[0];
+					group = clmn[1];
+					datentime = clmn[2];
+					question = clmn[3];
+					question = Data.getInstance().getQuestion(question);
+					Method[] method_list = {Method.P_AVERAGE,Method.P_RE_RANK};
+					for (Method method : method_list) {
+						num++;
+						conceptLevelMap = db.getConceptLevelAtTime(group,user, datentime);
+						simMap = ContentSim.calculateSim(question,exampleList, method, conceptLevelMap,qact.get(user).get(datentime),kcByContent);
+						// sorting the simMap
+						tmp = new HashMap<String, Double>();
+						vc = new ValueComparatorDouble(tmp);
+						sortedTreeMap = new TreeMap<String, Double>(vc);
+						tmp.putAll(simMap);
+						sortedTreeMap.putAll(tmp);
+						condensedSysRankMap = getTop3ExamplesInfo(question,simMap,new ArrayList<String>(sortedTreeMap.keySet()));
+						db.writeTop3SimScore(num,question,method,condensedSysRankMap);
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			System.out.println("System is not ready!");
+		}
+		db.close();
+	}
+
+	public static void getTop3EachApproach(String domain, String ratingFileName, int all, String filterUsers){
 		db = Data.getInstance();
 		if (db.isReady())
         {	
-			db.setup("",ratingFileName,all,""); 
+			db.setup("",ratingFileName,all,"",filterUsers); 
 			Set<String> pretestList = db.getPretestCategories();
+			Map<String, Double> condensedSysRankMap;	//Map<example,SimilarityValue>
+
+			Map<String,Double> simMap;
+			Set<String> ratedQList;
+			Set<Map<String, Double>> conceptLevelMap;
+			//params for sorting the map
+			Map<String,Double> tmp;
+			ValueComparatorDouble vc;
+			TreeMap<String,Double> sortedTreeMap;
+			String[] exampleList = db.getExamplesStudy();
+			Collections.shuffle(Arrays.asList(exampleList)); //list is shuffled 
+			int num = 0;
+			ArrayList<String> baselineSimShuffledList;
+			//evaluate non-personalized methods
+			for (Method method : Method.values())
+			{
+				ratedQList = db.getUniqueRatedQuestions(new ArrayList<String> (pretestList));
+				if (ratedQList.size() != 24)
+					System.out.println("~~~~~SIZE UNEXPECTED: "+ ratedQList.size() +"!=24");
+				for (String question : ratedQList)
+				{
+					if ( method.isInGroup(Method.Group.BASELINE))
+					{
+						num++;
+						simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
+						//randomizing the examples
+						baselineSimShuffledList = new ArrayList<String>(simMap.keySet());
+						Collections.shuffle(baselineSimShuffledList);
+						condensedSysRankMap = getTop3ExamplesInfo(question,simMap,new ArrayList<String>(baselineSimShuffledList));
+						db.writeTop3SimScore(num,question,method,condensedSysRankMap);
+					}
+					if (method.isInGroup(Method.Group.STATIC))
+					{
+						num++;
+						simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
+						//sorting the simMap
+						tmp = new HashMap<String,Double>();
+						vc = new ValueComparatorDouble(tmp);
+						sortedTreeMap = new TreeMap<String,Double>(vc);		
+						tmp.putAll(simMap);
+						sortedTreeMap.putAll(tmp);
+						//sortedTreeMap.keySet()  preserves the order
+						condensedSysRankMap = getTop3ExamplesInfo(question,simMap,new ArrayList<String>(sortedTreeMap.keySet()));
+						db.writeTop3SimScore(num,question,method,condensedSysRankMap);
+					}
+					else if (method.isInGroup(Method.Group.PERSONALZIED))
+					{
+						for (String pretest : pretestList)
+						{
+							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
+							if (conceptLevelMap != null)
+							{
+								for (Map<String,Double> kmap : conceptLevelMap)
+								{
+									num++;
+									simMap = ContentSim.calculateSim(question,exampleList,method,kmap,null,null);
+									//sorting the simMap
+									tmp = new HashMap<String,Double>();
+									vc = new ValueComparatorDouble(tmp);
+									sortedTreeMap = new TreeMap<String,Double>(vc);		
+									tmp.putAll(simMap);
+									sortedTreeMap.putAll(tmp);
+									//sortedTreeMap.keySet()  preserves the order
+									condensedSysRankMap = getTop3ExamplesInfo(question,simMap,new ArrayList<String>(sortedTreeMap.keySet()));
+									db.writeTop3SimScore(num,question,method,condensedSysRankMap);
+							     }
+							}
+						}
+					}
+				}										
+			}			
+		}
+		else
+		{
+			System.out.println("System is not ready!");
+		}
+		db.close();
+	}
+	
+	
+	public static void evaluate(String domain, String ratingFileName, int all, String filterUsers){
+		db = Data.getInstance();
+		if (db.isReady())
+        {	
+			db.setup("",ratingFileName,all,"",filterUsers); 
+			Set<String> pretestList = new HashSet<String>();
+		    if (filterUsers.equals("user_weighted_kappa_threshold_high_gt_0.4.csv"))
+		    	pretestList.add("High");
+		    else
+		    	pretestList = db.getPretestCategories();
 			Map<Integer, Map<String, Integer>> condensedSysRankMap;	//Map<rank,Map<example,MajorityVotingRating>>
 			Map<String, Double> condensedSimScoreMap;	//Map<example,similarityScore>
 
@@ -277,8 +462,9 @@ public class EvaluationSim {
 			Map<String,Double> tmp;
 			ValueComparatorDouble vc;
 			TreeMap<String,Double> sortedTreeMap;
-			String[] exampleList = db.getExamples();
+			String[] exampleList = db.getExamplesStudy();
 			Collections.shuffle(Arrays.asList(exampleList)); //list is shuffled 
+			ArrayList<String> baselineSimShuffledList;
 			//evaluate non-personalized methods
 			for (Method method : Method.values())
 			{
@@ -290,15 +476,16 @@ public class EvaluationSim {
 						if ( method.isInGroup(Method.Group.BASELINE))
 						{
 							simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
-							//sortedTreeMap.keySet()  preserves the order
-							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(simMap.keySet()));
-							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
-							IdealRankMap = getIdealRanking(condensedSysRankMap);
+							//randomizing the examples
+							baselineSimShuffledList = new ArrayList<String>(simMap.keySet());
+							Collections.shuffle(baselineSimShuffledList);
 							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
+							condensedSysRankMap = getCondensedListTop3(question,pretest,new ArrayList<String>(baselineSimShuffledList));
+							IdealRankMap = getIdealRanking(condensedSysRankMap);
 							AP = getAP(condensedSysRankMap,totalRelevantExample);
 							nDCG = getNDCG(condensedSysRankMap, IdealRankMap);
 							QMeasure = getQMeasure(condensedSysRankMap,IdealRankMap, totalRelevantExample);
-							RMSE = getRMSE(condensedSimScoreMap,condensedSysRankMap,method);
+							RMSE = getRMSEBaseline(baselineSimShuffledList,condensedSysRankMap,method);//sim for all examples is considered as 0.5
 							db.writeToFile(question,pretest,method,AP,nDCG,QMeasure,RMSE);
 						}
 						if (method.isInGroup(Method.Group.STATIC))
@@ -311,7 +498,7 @@ public class EvaluationSim {
 							tmp.putAll(simMap);
 							sortedTreeMap.putAll(tmp);
 							//sortedTreeMap.keySet()  preserves the order
-							condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
+							condensedSysRankMap = getCondensedListTop3(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 							condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
 							IdealRankMap = getIdealRanking(condensedSysRankMap);
 							totalRelevantExample = db.getRelevantExampleList(pretest, question).size();
@@ -321,7 +508,7 @@ public class EvaluationSim {
 							RMSE = getRMSE(condensedSimScoreMap,condensedSysRankMap,method);
 							db.writeToFile(question,pretest,method,AP,nDCG,QMeasure,RMSE);
 						}
-						else if (method.isInGroup(Method.Group.PERSONALZIED))
+						else if (method.isInGroup(Method.Group.PERSONALZIED) )
 						{
 							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
 							for (Map<String,Double> kmap : conceptLevelMap)
@@ -334,7 +521,7 @@ public class EvaluationSim {
 								tmp.putAll(simMap);
 								sortedTreeMap.putAll(tmp);
 								//sortedTreeMap.keySet()  preserves the order
-								condensedSysRankMap = getCondensedList(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
+								condensedSysRankMap = getCondensedListTop3(question,pretest,new ArrayList<String>(sortedTreeMap.keySet()));
 								condensedSimScoreMap = getcondensedSimScoreList(question,pretest, simMap);
 								IdealRankMap = getIdealRanking(condensedSysRankMap);
 								totalRelevantExample = db.getRelevantExampleList(pretest,question).size();
@@ -356,6 +543,7 @@ public class EvaluationSim {
 		db.close();
 	}
 	
+
 	private static double getRMSE(Map<String, Double> condensedSimScoreMap,
 			Map<Integer, Map<String, Integer>> condensedSysRankMap, Method method) {
 		double ss = 0.0;
@@ -368,7 +556,7 @@ public class EvaluationSim {
 			majorityVotingRate = getMajorityVoting(example,condensedSysRankMap);
 			if (majorityVotingRate == -1)
 			{
-				System.out.println("UNEXPECTED ERROR : NO MAJORITY VOTING FOR THE EXAMPLE: "+example);
+				//System.out.println("UNEXPECTED ERROR : NO MAJORITY VOTING FOR THE EXAMPLE: "+example);
 				continue;
 			}
 			normalizedMajorityVotingRate = normalizeVoting(majorityVotingRate);
@@ -385,6 +573,39 @@ public class EvaluationSim {
 		return rmse;
 	}
 
+	
+	private static double getRMSEBaseline(List<String> baselineSimShuffledList,Map<Integer, Map<String, Integer>> condensedSysRankMap,
+			                              Method method) {
+		double ss = 0.0;
+		double sim,majorityVotingRate;
+		double normalizedSim = 0;
+		double normalizedMajorityVotingRate = 0.0;
+		int itemsToCountInRMSE = 0;
+		for (String example : baselineSimShuffledList)
+		{
+			sim = 0.5;
+			majorityVotingRate = getMajorityVoting(example,condensedSysRankMap);
+			if (majorityVotingRate == -1)
+			{
+				//System.out.println("UNEXPECTED ERROR : NO MAJORITY VOTING FOR THE EXAMPLE: "+example);
+				continue;
+			}
+			normalizedMajorityVotingRate = normalizeVoting(majorityVotingRate);
+			if (Arrays.asList(api.Constants.NORMALIZED_METHODS).contains(method) == false){//you should normalize the similarity score, it is between -1 and 1.
+				normalizedSim = normalizedSim(sim);
+			}
+			else {
+				normalizedSim = sim; //the similarity is already between 0,1.
+			}
+			ss += Math.pow((normalizedSim-normalizedMajorityVotingRate),2);
+			itemsToCountInRMSE ++;
+		}
+		double mse = ss/itemsToCountInRMSE;
+		double rmse = Math.sqrt(mse);
+		return rmse;
+	}
+
+	
 	/*
 	 * returns the normalized value for the majority voting based on the gains
 	 */
@@ -488,11 +709,17 @@ public class EvaluationSim {
 			Map<Integer, Map<String, Integer>> idealRankMap) {
 		double dg = 0, dgI = 0, nDCG;
 		int rate = 0, rateI = 0;
+		if (condensedSysRankMap.size()!=idealRankMap.size())
+			System.out.println("~~~~~~ ERROR in getNDCG(): size condensedSysRankMap != idealRankMap");
+		//this part is changed in second revision of ijaied to due to bug in ndcg method
 		for (int rank : condensedSysRankMap.keySet())
 		{
 			rate = (Integer) condensedSysRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
-			rateI = (Integer) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
 			dg += dg(rank,rate);
+		}
+		for (int rank : idealRankMap.keySet())
+		{
+			rateI = (Integer) idealRankMap.get(rank).values().toArray()[0]; //only 1 element in the map
 			dgI += dg(rank,rateI);
 		}
 		if (dg == 0.0 && dgI == 0.0) //all docs are not helpful
@@ -540,6 +767,8 @@ public class EvaluationSim {
 	private static double getAP(Map<Integer, Map<String, Integer>> condensedSysRankMap,int totalRelevantExamples) {
 		double sum = 0;
 		double AP;
+//		if (totalRelevantExamples >condensedSysRankMap.size())
+//			System.out.println("~~~~~~AP: totalRelevantExamples >condensedSysRankMap.size()");
 		if (totalRelevantExamples != 0)
 		{
 			for (int rank : condensedSysRankMap.keySet())  //we need to go over all rank to check if our ranking is good
@@ -604,6 +833,25 @@ public class EvaluationSim {
 		}
 		return sortedRankMap;
 	}
+	
+	/*
+	 * returns a map with top-3 examples ranked by approach. map<key:example;value:similarityValue>
+	 */
+	private static Map<String, Double> getTop3ExamplesInfo(String question,Map<String, Double> simMap, List<String> orderedSet) {
+		int rank = 0;
+		Map<String,Double> sortedRankMap = new HashMap<String,Double>();
+		for (String example : orderedSet)
+        {
+			rank++;// gosh this was misplaced for the prelim/first revision
+					// ijaied inside if and it always had ranks 1,2,3,4,5,... no
+					// matter what was the order of the example in the list
+			if (rank > 3)
+				break;
+			sortedRankMap.put(example, simMap.get(example));
+		}
+		return sortedRankMap;
+	}
+
 
 	/*
 	 * condensedlist is a map with key:rank and value:map<key:example;value:MajorityVoting>
@@ -613,15 +861,41 @@ public class EvaluationSim {
 		Map<Integer,Map<String,Integer>> sortedRankMap = new HashMap<Integer,Map<String,Integer>>();
 		List<Integer> ratingList;
 		for (String example : orderedSet)
-		{
-			if (db.isJudged(question,example,pretest) == true)
-			{
-				rank ++;
-				Map<String,Integer> ratingMap = new HashMap<String,Integer>();
+        {
+			rank++;// gosh this was misplaced for the prelim/first revision
+					// ijaied inside if and it always had ranks 1,2,3,4,5,... no
+					// matter what was the order of the example in the list
+			if (db.isJudged(question, example, pretest) == true) {
+				Map<String, Integer> ratingMap = new HashMap<String, Integer>();
 				ratingList = db.getRatingList(question, example, pretest);
-				ratingMap.put(example,db.aggregateJudges(ratingList));
+				ratingMap.put(example, db.aggregateJudges(ratingList));
 				sortedRankMap.put(rank, ratingMap);
-			}			
+			}
+
+		}
+		return sortedRankMap;
+	}
+
+	/*
+	 * condensedlist is a map with key:rank and value:map<key:example;value:MajorityVoting>
+	 */
+	private static Map<Integer, Map<String, Integer>> getCondensedListTop3(String question,String pretest, List<String> orderedSet) {
+		int rank = 0;
+		Map<Integer,Map<String,Integer>> sortedRankMap = new HashMap<Integer,Map<String,Integer>>();
+		List<Integer> ratingList;
+		for (String example : orderedSet)
+        {
+			rank++;// gosh this was misplaced for the prelim/first revision
+					// ijaied inside if and it always had ranks 1,2,3,4,5,... no
+					// matter what was the order of the example in the list
+			if (rank <= 3){
+				if (db.isJudged(question, example, pretest) == true) {
+					Map<String, Integer> ratingMap = new HashMap<String, Integer>();
+					ratingList = db.getRatingList(question, example, pretest);
+					ratingMap.put(example, db.aggregateJudges(ratingList));
+					sortedRankMap.put(rank, ratingMap);
+				}
+			}
 		}
 		return sortedRankMap;
 	}
@@ -657,4 +931,119 @@ public class EvaluationSim {
 	        } // 
 	    } // returning 0 would merge keys	   
 	}
+	
+	
+	public static void propRatingForMethods(String domain, String ratingFileName, int all, String filterUsers){
+		db = Data.getInstance();
+		if (db.isReady())
+        {	
+			db.setup("",ratingFileName,all,"",filterUsers); 
+			Set<String> pretestList = db.getPretestCategories();
+			Map<String, Integer> judgedTop3ExList;	
+
+			Map<String,Double> simMap;
+			Set<String> ratedQList;
+			Set<Map<String, Double>> conceptLevelMap;
+			String[] exampleList = db.getExamplesStudy();
+			Collections.shuffle(Arrays.asList(exampleList)); //list is shuffled 
+			//params for sorting the map
+			Map<String,Double> tmp;
+			ValueComparatorDouble vc;
+			TreeMap<String,Double> sortedTreeMap;
+			List<String> top3ex;
+			List<String> shuffletmp;
+			//evaluate non-personalized methods
+			for (Method method : Method.values())
+			{
+				for (String pretest : pretestList)
+				{	
+					ratedQList = db.getRatedQuestions(pretest);
+					for (String question : ratedQList)
+					{
+						if ( method.isInGroup(Method.Group.BASELINE))
+						{
+							simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
+							shuffletmp = new ArrayList<String>(simMap.keySet());
+							Collections.shuffle(shuffletmp);
+							top3ex = getTop3Ex(shuffletmp);
+							judgedTop3ExList = getJudgedTop3Examples(question,pretest,top3ex);
+							db.writePropRatingsForMethods(question,judgedTop3ExList,pretest,method);
+						}
+						if (method.isInGroup(Method.Group.STATIC))
+						{
+							simMap = ContentSim.calculateSim(question,exampleList,method,null,null,null);
+							//sorting the simMap
+							tmp = new HashMap<String,Double>();
+							vc = new ValueComparatorDouble(tmp);
+							sortedTreeMap = new TreeMap<String,Double>(vc);		
+							tmp.putAll(simMap);
+							sortedTreeMap.putAll(tmp);
+							//sortedTreeMap.keySet()  preserves the order
+							top3ex = getTop3Ex(new ArrayList<String>(sortedTreeMap.keySet()));
+							judgedTop3ExList = getJudgedTop3Examples(question,pretest,top3ex);
+							db.writePropRatingsForMethods(question,judgedTop3ExList,pretest,method);
+						}
+						else if (method.isInGroup(Method.Group.PERSONALZIED))
+						{
+							conceptLevelMap = db.getKnowledgeLevels(pretest,question);	
+							for (Map<String,Double> kmap : conceptLevelMap)
+							{
+								simMap = ContentSim.calculateSim(question,exampleList,method,kmap,null,null);
+								//sorting the simMap
+								tmp = new HashMap<String,Double>();
+								vc = new ValueComparatorDouble(tmp);
+								sortedTreeMap = new TreeMap<String,Double>(vc);		
+								tmp.putAll(simMap);
+								sortedTreeMap.putAll(tmp);
+								//sortedTreeMap.keySet()  preserves the order
+								top3ex = getTop3Ex(new ArrayList<String>(sortedTreeMap.keySet()));
+								judgedTop3ExList = getJudgedTop3Examples(question,pretest,top3ex);
+								db.writePropRatingsForMethods(question,judgedTop3ExList,pretest,method);
+							}
+						}
+					}										
+				}
+			}			
+		}
+		else
+		{
+			System.out.println("System is not ready!");
+		}
+		db.close();
+	}
+
+
+	private static List<String> getTop3Ex(List<String> input) {
+		List<String> list = new ArrayList<String>();
+		int i = 0;
+		for (String s : input)
+		{
+			if (i >= 3)
+				break;
+			else{
+				list.add(s);
+				i++;
+			}
+		}
+		return list;
+	}
+
+
+	private static Map<String,Integer> getJudgedTop3Examples(String question,String pretest, List<String> orderedSet) {
+		Map<String,Integer> ratedExamplesMap = new HashMap<String,Integer>();
+		List<Integer> ratingList;
+		for (String example : orderedSet)
+		{
+			if (db.isJudged(question,example,pretest) == true)
+			{
+				ratingList = db.getRatingList(question, example, pretest);
+				ratedExamplesMap.put(example,db.aggregateJudges(ratingList));
+			}			
+		}
+		return ratedExamplesMap;
+	}
+
+	
+	
+	
 }
